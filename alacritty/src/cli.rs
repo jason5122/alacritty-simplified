@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use alacritty_config::SerdeReplace;
 use clap::{ArgAction, Args, Parser, Subcommand, ValueHint};
-use log::{self, error, LevelFilter};
+use log::{self, error};
 use serde::{Deserialize, Serialize};
 use toml::Value;
 
@@ -81,26 +81,6 @@ impl Options {
         options.config_options = options.window_options.config_overrides();
 
         options
-    }
-
-    /// Logging filter level.
-    pub fn log_level(&self) -> LevelFilter {
-        match (self.quiet, self.verbose) {
-            // Force at least `Info` level for `--print-events`.
-            (_, 0) if self.print_events => LevelFilter::Info,
-
-            // Default.
-            (0, 0) => LevelFilter::Warn,
-
-            // Verbose.
-            (_, 1) => LevelFilter::Info,
-            (_, 2) => LevelFilter::Debug,
-            (0, _) => LevelFilter::Trace,
-
-            // Quiet.
-            (1, _) => LevelFilter::Error,
-            (..) => LevelFilter::Off,
-        }
     }
 }
 

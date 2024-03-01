@@ -179,14 +179,6 @@ impl HintState {
     pub fn matches(&self) -> &[Match] {
         &self.matches
     }
-
-    /// Update the alphabet used for hint labels.
-    pub fn update_alphabet(&mut self, alphabet: &str) {
-        if self.alphabet != alphabet {
-            self.alphabet = alphabet.to_owned();
-            self.keys.clear();
-        }
-    }
 }
 
 /// Hint match which was selected by the user.

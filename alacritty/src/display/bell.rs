@@ -97,11 +97,6 @@ impl VisualBell {
             },
         }
     }
-
-    pub fn update_config(&mut self, bell_config: &BellConfig) {
-        self.animation = bell_config.animation;
-        self.duration = bell_config.duration();
-    }
 }
 
 impl From<&BellConfig> for VisualBell {

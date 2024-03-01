@@ -36,8 +36,8 @@ use alacritty_terminal::term::search::{Match, RegexSearch};
 use alacritty_terminal::term::{self, ClipboardType, Term, TermMode};
 
 #[cfg(unix)]
-use crate::cli::{IpcConfig, ParsedOptions};
-use crate::cli::{Options as CliOptions, WindowOptions};
+use crate::cli::IpcConfig;
+use crate::cli::WindowOptions;
 use crate::clipboard::Clipboard;
 use crate::config::ui_config::{HintAction, HintInternalAction};
 use crate::config::UiConfig;
@@ -1500,9 +1500,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
 pub struct Processor {
     windows: HashMap<WindowId, WindowContext, RandomState>,
     gl_display: Option<GlutinDisplay>,
-    #[cfg(unix)]
-    global_ipc_options: ParsedOptions,
-    cli_options: CliOptions,
     config: Rc<UiConfig>,
 }
 
@@ -1510,19 +1507,8 @@ impl Processor {
     /// Create a new event processor.
     ///
     /// Takes a writer which is expected to be hooked up to the write end of a PTY.
-    pub fn new(
-        config: UiConfig,
-        cli_options: CliOptions,
-        _event_loop: &EventLoop<Event>,
-    ) -> Processor {
-        Processor {
-            cli_options,
-            gl_display: None,
-            config: Rc::new(config),
-            windows: Default::default(),
-            #[cfg(unix)]
-            global_ipc_options: Default::default(),
-        }
+    pub fn new(config: UiConfig, _event_loop: &EventLoop<Event>) -> Processor {
+        Processor { gl_display: None, config: Rc::new(config), windows: Default::default() }
     }
 
     /// Create initial window and load GL platform.

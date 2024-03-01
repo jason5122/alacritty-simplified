@@ -4,13 +4,13 @@
 //! startup. All logging messages are written to stdout, given that their
 //! log-level is sufficient for the level configured in `cli::Options`.
 
+use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{self, LineWriter, Stdout, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
-use std::{env, process};
 
 use log::{self, Level, LevelFilter};
 use winit::event_loop::EventLoopProxy;
@@ -165,16 +165,6 @@ struct OnDemandLogFile {
 }
 
 impl OnDemandLogFile {
-    fn new() -> Self {
-        let mut path = env::temp_dir();
-        path.push(format!("Alacritty-{}.log", process::id()));
-
-        // Set log path as an environment variable.
-        env::set_var(ALACRITTY_LOG_ENV, path.as_os_str());
-
-        OnDemandLogFile { path, file: None, created: Arc::new(AtomicBool::new(false)) }
-    }
-
     fn file(&mut self) -> Result<&mut LineWriter<File>, io::Error> {
         // Allow to recreate the file if it has been deleted at runtime.
         if self.file.is_some() && !self.path.as_path().exists() {
@@ -200,10 +190,6 @@ impl OnDemandLogFile {
         }
 
         Ok(self.file.as_mut().unwrap())
-    }
-
-    fn path(&self) -> &PathBuf {
-        &self.path
     }
 }
 

@@ -23,7 +23,7 @@ use {
     cocoa::appkit::NSColorSpace,
     cocoa::base::{id, nil, NO, YES},
     objc::{msg_send, sel, sel_impl},
-    winit::platform::macos::{OptionAsAlt, WindowBuilderExtMacOS, WindowExtMacOS},
+    winit::platform::macos::{WindowBuilderExtMacOS, WindowExtMacOS},
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -33,8 +33,8 @@ use winit::monitor::MonitorHandle;
 #[cfg(windows)]
 use winit::platform::windows::IconExtWindows;
 use winit::window::{
-    CursorIcon, Fullscreen, ImePurpose, Theme, UserAttentionType, Window as WinitWindow,
-    WindowBuilder, WindowId,
+    CursorIcon, Fullscreen, ImePurpose, UserAttentionType, Window as WinitWindow, WindowBuilder,
+    WindowId,
 };
 
 use alacritty_terminal::index::Point;
@@ -230,12 +230,6 @@ impl Window {
         self.window.set_title(&self.title);
     }
 
-    /// Get the window title.
-    #[inline]
-    pub fn title(&self) -> &str {
-        &self.title
-    }
-
     #[inline]
     pub fn request_redraw(&mut self) {
         if !self.requested_redraw {
@@ -341,14 +335,6 @@ impl Window {
         self.window.id()
     }
 
-    pub fn set_transparent(&self, transparent: bool) {
-        self.window.set_transparent(transparent);
-    }
-
-    pub fn set_blur(&self, blur: bool) {
-        self.window.set_blur(blur);
-    }
-
     pub fn set_maximized(&self, maximized: bool) {
         self.window.set_maximized(maximized);
     }
@@ -378,18 +364,9 @@ impl Window {
         self.window.pre_present_notify();
     }
 
-    pub fn set_theme(&self, theme: Option<Theme>) {
-        self.window.set_theme(theme);
-    }
-
     #[cfg(target_os = "macos")]
     pub fn toggle_simple_fullscreen(&self) {
         self.set_simple_fullscreen(!self.window.simple_fullscreen());
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn set_option_as_alt(&self, option_as_alt: OptionAsAlt) {
-        self.window.set_option_as_alt(option_as_alt);
     }
 
     pub fn set_fullscreen(&self, fullscreen: bool) {

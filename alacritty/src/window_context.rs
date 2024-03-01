@@ -26,7 +26,7 @@ use alacritty_terminal::term::test::TermSize;
 use alacritty_terminal::term::{Term, TermMode};
 use alacritty_terminal::tty;
 
-use crate::cli::{ParsedOptions, WindowOptions};
+use crate::cli::WindowOptions;
 use crate::clipboard::Clipboard;
 use crate::config::UiConfig;
 use crate::display::window::Window;
@@ -58,7 +58,6 @@ pub struct WindowContext {
     master_fd: RawFd,
     #[cfg(not(windows))]
     shell_pid: u32,
-    window_config: ParsedOptions,
     config: Rc<UiConfig>,
 }
 
@@ -192,7 +191,6 @@ impl WindowContext {
             cursor_blink_timed_out: Default::default(),
             inline_search_state: Default::default(),
             message_buffer: Default::default(),
-            window_config: Default::default(),
             search_state: Default::default(),
             event_queue: Default::default(),
             modifiers: Default::default(),

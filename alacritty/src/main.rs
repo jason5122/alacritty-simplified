@@ -124,7 +124,7 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
 
     // Event processor.
     let window_options = options.window_options.clone();
-    let mut processor = Processor::new(config, options, &window_event_loop);
+    let mut processor = Processor::new(config, &window_event_loop);
 
     // Start event loop and block until shutdown.
     let result = processor.run(window_event_loop, window_options);
