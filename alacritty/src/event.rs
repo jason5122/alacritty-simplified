@@ -149,19 +149,9 @@ impl SearchState {
         self.direction
     }
 
-    /// Focused match during vi-less search.
-    pub fn focused_match(&self) -> Option<&Match> {
-        self.focused_match.as_ref()
-    }
-
     /// Clear the focused match.
     pub fn clear_focused_match(&mut self) {
         self.focused_match = None;
-    }
-
-    /// Active search dfas.
-    pub fn dfas(&mut self) -> Option<&mut RegexSearch> {
-        self.dfas.as_mut()
     }
 
     /// Search regex text if a search is active.

@@ -7,15 +7,14 @@ use alacritty_terminal::grid::{Dimensions, Indexed};
 use alacritty_terminal::index::{Column, Line, Point};
 use alacritty_terminal::selection::SelectionRange;
 use alacritty_terminal::term::cell::{Cell, Flags, Hyperlink};
-use alacritty_terminal::term::search::{Match, RegexSearch};
+use alacritty_terminal::term::search::Match;
 use alacritty_terminal::term::{self, RenderableContent as TerminalContent, Term, TermMode};
 use alacritty_terminal::vte::ansi::{Color, CursorShape, NamedColor};
 
 use crate::config::UiConfig;
 use crate::display::color::{CellRgb, List, Rgb, DIM_FACTOR};
-use crate::display::hint::{self, HintState};
+use crate::display::hint::HintState;
 use crate::display::{Display, SizeInfo};
-use crate::event::SearchState;
 
 /// Minimum contrast between a fixed cursor color and the cell's background.
 pub const MIN_CURSOR_CONTRAST: f64 = 1.5;
@@ -41,24 +40,8 @@ impl<'a> RenderableContent<'a> {
         config: &'a UiConfig,
         display: &'a mut Display,
         term: &'a Term<T>,
-        search_state: &'a mut SearchState,
     ) -> Self {
-        let search = search_state.dfas().map(|dfas| HintMatches::visible_regex_matches(term, dfas));
-        let focused_match = search_state.focused_match();
         let terminal_content = term.renderable_content();
-
-        // Find terminal cursor shape.
-        let cursor_shape = if terminal_content.cursor.shape == CursorShape::Hidden
-            || display.cursor_hidden
-            || search_state.regex().is_some()
-            || display.ime.preedit().is_some()
-        {
-            CursorShape::Hidden
-        } else if !term.is_focused && config.cursor.unfocused_hollow {
-            CursorShape::HollowBlock
-        } else {
-            terminal_content.cursor.shape
-        };
 
         // Convert terminal cursor point to viewport position.
         let cursor_point = terminal_content.cursor.point;
@@ -77,10 +60,10 @@ impl<'a> RenderableContent<'a> {
             size: &display.size_info,
             cursor: RenderableCursor::new_hidden(),
             terminal_content,
-            focused_match,
-            cursor_shape,
+            focused_match: None,
+            cursor_shape: CursorShape::Block,
             cursor_point,
-            search,
+            search: None,
             config,
             hint,
         }
@@ -507,12 +490,6 @@ impl<'a> HintMatches<'a> {
     /// Create new renderable matches iterator..
     fn new(matches: impl Into<Cow<'a, [Match]>>) -> Self {
         Self { matches: matches.into(), index: 0 }
-    }
-
-    /// Create from regex matches on term visible part.
-    fn visible_regex_matches<T>(term: &Term<T>, dfas: &mut RegexSearch) -> Self {
-        let matches = hint::visible_regex_match_iter(term, dfas).collect::<Vec<_>>();
-        Self::new(matches)
     }
 
     /// Advance the regex tracker to the next point.

@@ -34,8 +34,6 @@ mod logging;
 #[cfg(target_os = "macos")]
 mod macos;
 mod message_bar;
-#[cfg(windows)]
-mod panic;
 mod renderer;
 mod scheduler;
 mod string;
