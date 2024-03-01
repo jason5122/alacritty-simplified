@@ -1724,56 +1724,6 @@ impl Processor {
                     };
                     event_loop.set_control_flow(control_flow);
                 },
-                // Process config update.
-                WinitEvent::UserEvent(Event { payload: EventType::ConfigReload(path), .. }) => {
-                    // Clear config logs from message bar for all terminals.
-                    for window_context in self.windows.values_mut() {
-                        if !window_context.message_buffer.is_empty() {
-                            window_context.message_buffer.remove_target(LOG_TARGET_CONFIG);
-                            window_context.display.pending_update.dirty = true;
-                        }
-                    }
-
-                    // Load config and update each terminal.
-                    if let Ok(config) = config::reload(&path, &mut self.cli_options) {
-                        self.config = Rc::new(config);
-
-                        for window_context in self.windows.values_mut() {
-                            window_context.update_config(self.config.clone());
-                        }
-                    }
-                },
-                // Process IPC config update.
-                #[cfg(unix)]
-                WinitEvent::UserEvent(Event {
-                    payload: EventType::IpcConfig(ipc_config),
-                    window_id,
-                }) => {
-                    // Try and parse options as toml.
-                    let mut options = ParsedOptions::from_options(&ipc_config.options);
-
-                    // Override IPC config for each window with matching ID.
-                    for (_, window_context) in self
-                        .windows
-                        .iter_mut()
-                        .filter(|(id, _)| window_id.is_none() || window_id == Some(**id))
-                    {
-                        if ipc_config.reset {
-                            window_context.reset_window_config(self.config.clone());
-                        } else {
-                            window_context.add_window_config(self.config.clone(), &options);
-                        }
-                    }
-
-                    // Persist global options for future windows.
-                    if window_id.is_none() {
-                        if ipc_config.reset {
-                            self.global_ipc_options.clear();
-                        } else {
-                            self.global_ipc_options.append(&mut options);
-                        }
-                    }
-                },
                 // Create a new terminal window.
                 WinitEvent::UserEvent(Event {
                     payload: EventType::CreateWindow(options), ..

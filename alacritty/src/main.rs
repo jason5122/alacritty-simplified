@@ -139,8 +139,8 @@ fn alacritty(mut options: Options) -> Result<(), Box<dyn Error>> {
     info!("Running on Wayland");
 
     // Load configuration file.
-    let config = config::load(&mut options);
-    log_config_path(&config);
+    // let config = config::load(&mut options);
+    let config = UiConfig::default();
 
     // Update the log level from config.
     log::set_max_level(config.debug.log_level);
@@ -217,17 +217,4 @@ fn alacritty(mut options: Options) -> Result<(), Box<dyn Error>> {
     info!("Goodbye");
 
     result
-}
-
-fn log_config_path(config: &UiConfig) {
-    if config.config_paths.is_empty() {
-        return;
-    }
-
-    let mut msg = String::from("Configuration files loaded from:");
-    for path in &config.config_paths {
-        let _ = write!(msg, "\n  {:?}", path.display());
-    }
-
-    info!("{}", msg);
 }
