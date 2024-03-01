@@ -13,7 +13,6 @@
 compile_error!(r#"at least one of the "x11"/"wayland" features must be enabled"#);
 
 use std::error::Error;
-use std::fmt::Write as _;
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::{env, fs};
@@ -122,7 +121,7 @@ impl Drop for TemporaryFiles {
 ///
 /// Creates a window, the terminal state, PTY, I/O event loop, input processor,
 /// config change monitor, and runs the main display loop.
-fn alacritty(mut options: Options) -> Result<(), Box<dyn Error>> {
+fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
     // Setup winit event loop.
     let window_event_loop = WinitEventLoopBuilder::<Event>::with_user_event().build()?;
 

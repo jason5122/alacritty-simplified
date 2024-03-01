@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
 use std::{env, fs, io};
 
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 use serde::Deserialize;
 use serde_yaml::Error as YamlError;
 use toml::de::Error as TomlError;
@@ -26,7 +26,6 @@ pub mod window;
 mod bindings;
 mod mouse;
 
-use crate::cli::Options;
 #[cfg(test)]
 pub use crate::config::bindings::Binding;
 pub use crate::config::bindings::{
@@ -122,67 +121,6 @@ impl From<TomlSeError> for Error {
 impl From<YamlError> for Error {
     fn from(val: YamlError) -> Self {
         Error::Yaml(val)
-    }
-}
-
-/// Load the configuration file.
-pub fn load(options: &mut Options) -> UiConfig {
-    let config_path = options
-        .config_file
-        .clone()
-        .or_else(|| installed_config("toml"))
-        .or_else(|| installed_config("yml"));
-
-    // Load the config using the following fallback behavior:
-    //  - Config path + CLI overrides
-    //  - CLI overrides
-    //  - Default
-    let mut config = config_path
-        .as_ref()
-        .and_then(|config_path| load_from(config_path).ok())
-        .unwrap_or_else(|| {
-            let mut config = UiConfig::default();
-            match config_path {
-                Some(config_path) => config.config_paths.push(config_path),
-                None => info!(target: LOG_TARGET_CONFIG, "No config file found; using default"),
-            }
-            config
-        });
-
-    after_loading(&mut config, options);
-
-    config
-}
-
-/// Attempt to reload the configuration file.
-pub fn reload(config_path: &Path, options: &mut Options) -> Result<UiConfig> {
-    debug!("Reloading configuration file: {:?}", config_path);
-
-    // Load config, propagating errors.
-    let mut config = load_from(config_path)?;
-
-    after_loading(&mut config, options);
-
-    Ok(config)
-}
-
-/// Modifications after the `UiConfig` object is created.
-fn after_loading(config: &mut UiConfig, options: &mut Options) {
-    // Override config with CLI options.
-    options.override_config(config);
-
-    // Create key bindings for regex hints.
-    config.generate_hint_bindings();
-}
-
-/// Load configuration file and log errors.
-fn load_from(path: &Path) -> Result<UiConfig> {
-    match read_config(path) {
-        Ok(config) => Ok(config),
-        Err(err) => {
-            error!(target: LOG_TARGET_CONFIG, "Unable to load config {:?}: {}", path, err);
-            Err(err)
-        },
     }
 }
 

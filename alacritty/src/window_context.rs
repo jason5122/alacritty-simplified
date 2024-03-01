@@ -3,7 +3,6 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use std::mem;
 #[cfg(not(windows))]
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
@@ -37,8 +36,6 @@ use crate::display::Display;
 use crate::event::{
     ActionContext, Event, EventProxy, InlineSearchState, Mouse, SearchState, TouchPurpose,
 };
-#[cfg(unix)]
-use crate::logging::LOG_TARGET_IPC_CONFIG;
 use crate::message_bar::MessageBuffer;
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
@@ -260,105 +257,6 @@ impl WindowContext {
             touch: Default::default(),
             dirty: Default::default(),
         })
-    }
-
-    /// Update the terminal window to the latest config.
-    pub fn update_config(&mut self, new_config: Rc<UiConfig>) {
-        let old_config = mem::replace(&mut self.config, new_config);
-
-        // Apply ipc config if there are overrides.
-        self.config = self.window_config.override_config_rc(self.config.clone());
-
-        self.display.update_config(&self.config);
-        self.terminal.lock().set_options(self.config.term_options());
-
-        // Reload cursor if its thickness has changed.
-        if (old_config.cursor.thickness() - self.config.cursor.thickness()).abs() > f32::EPSILON {
-            self.display.pending_update.set_cursor_dirty();
-        }
-
-        if old_config.font != self.config.font {
-            let scale_factor = self.display.window.scale_factor as f32;
-            // Do not update font size if it has been changed at runtime.
-            if self.display.font_size == old_config.font.size().scale(scale_factor) {
-                self.display.font_size = self.config.font.size().scale(scale_factor);
-            }
-
-            let font = self.config.font.clone().with_size(self.display.font_size);
-            self.display.pending_update.set_font(font);
-        }
-
-        // Always reload the theme to account for auto-theme switching.
-        self.display.window.set_theme(self.config.window.theme());
-
-        // Update display if either padding options or resize increments were changed.
-        let window_config = &old_config.window;
-        if window_config.padding(1.) != self.config.window.padding(1.)
-            || window_config.dynamic_padding != self.config.window.dynamic_padding
-            || window_config.resize_increments != self.config.window.resize_increments
-        {
-            self.display.pending_update.dirty = true;
-        }
-
-        // Update title on config reload according to the following table.
-        //
-        // │cli │ dynamic_title │ current_title == old_config ││ set_title │
-        // │ Y  │       _       │              _              ││     N     │
-        // │ N  │       Y       │              Y              ││     Y     │
-        // │ N  │       Y       │              N              ││     N     │
-        // │ N  │       N       │              _              ││     Y     │
-        if !self.preserve_title
-            && (!self.config.window.dynamic_title
-                || self.display.window.title() == old_config.window.identity.title)
-        {
-            self.display.window.set_title(self.config.window.identity.title.clone());
-        }
-
-        let opaque = self.config.window_opacity() >= 1.;
-
-        // Disable shadows for transparent windows on macOS.
-        #[cfg(target_os = "macos")]
-        self.display.window.set_has_shadow(opaque);
-
-        #[cfg(target_os = "macos")]
-        self.display.window.set_option_as_alt(self.config.window.option_as_alt());
-
-        // Change opacity and blur state.
-        self.display.window.set_transparent(!opaque);
-        self.display.window.set_blur(self.config.window.blur);
-
-        // Update hint keys.
-        self.display.hint_state.update_alphabet(self.config.hints.alphabet());
-
-        // Update cursor blinking.
-        let event = Event::new(TerminalEvent::CursorBlinkingChange.into(), None);
-        self.event_queue.push(event.into());
-
-        self.dirty = true;
-    }
-
-    /// Clear the window config overrides.
-    #[cfg(unix)]
-    pub fn reset_window_config(&mut self, config: Rc<UiConfig>) {
-        // Clear previous window errors.
-        self.message_buffer.remove_target(LOG_TARGET_IPC_CONFIG);
-
-        self.window_config.clear();
-
-        // Reload current config to pull new IPC config.
-        self.update_config(config);
-    }
-
-    /// Add new window config overrides.
-    #[cfg(unix)]
-    pub fn add_window_config(&mut self, config: Rc<UiConfig>, options: &ParsedOptions) {
-        // Clear previous window errors.
-        self.message_buffer.remove_target(LOG_TARGET_IPC_CONFIG);
-
-        self.window_config.extend_from_slice(options);
-
-        // Reload current config to pull new IPC config.
-        self.update_config(config);
     }
 
     /// Draw the window.

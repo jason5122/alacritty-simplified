@@ -16,7 +16,7 @@ use std::{env, f32, mem};
 use ahash::RandomState;
 use crossfont::Size as FontSize;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{
     ElementState, Event as WinitEvent, Ime, Modifiers, MouseButton, StartCause,
@@ -40,7 +40,7 @@ use crate::cli::{IpcConfig, ParsedOptions};
 use crate::cli::{Options as CliOptions, WindowOptions};
 use crate::clipboard::Clipboard;
 use crate::config::ui_config::{HintAction, HintInternalAction};
-use crate::config::{self, UiConfig};
+use crate::config::UiConfig;
 #[cfg(not(windows))]
 use crate::daemon::foreground_process_path;
 use crate::daemon::spawn_daemon;
@@ -49,7 +49,6 @@ use crate::display::hint::HintMatch;
 use crate::display::window::Window;
 use crate::display::{Display, Preedit, SizeInfo};
 use crate::input::{self, ActionContext as _, FONT_SIZE_STEP};
-use crate::logging::LOG_TARGET_CONFIG;
 use crate::message_bar::{Message, MessageBuffer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::window_context::WindowContext;
@@ -1622,23 +1621,6 @@ impl Processor {
 
                     info!("Initialisation complete");
                 },
-                WinitEvent::LoopExiting => {
-                    match self.gl_display.take() {
-                        #[cfg(not(target_os = "macos"))]
-                        Some(glutin::display::Display::Egl(display)) => {
-                            // Ensure that all the windows are dropped, so the destructors for
-                            // Renderer and contexts ran.
-                            self.windows.clear();
-
-                            // SAFETY: the display is being destroyed after destroying all the
-                            // windows, thus no attempt to access the EGL state will be made.
-                            unsafe {
-                                display.terminate();
-                            }
-                        },
-                        _ => (),
-                    }
-                },
                 // NOTE: This event bypasses batching to minimize input latency.
                 WinitEvent::UserEvent(Event {
                     window_id: Some(window_id),
@@ -1723,22 +1705,6 @@ impl Processor {
                         None => ControlFlow::Wait,
                     };
                     event_loop.set_control_flow(control_flow);
-                },
-                // Create a new terminal window.
-                WinitEvent::UserEvent(Event {
-                    payload: EventType::CreateWindow(options), ..
-                }) => {
-                    // XXX Ensure that no context is current when creating a new window,
-                    // otherwise it may lock the backing buffer of the
-                    // surface of current context when asking
-                    // e.g. EGL on Wayland to create a new context.
-                    for window_context in self.windows.values_mut() {
-                        window_context.display.make_not_current();
-                    }
-
-                    if let Err(err) = self.create_window(event_loop, proxy.clone(), options) {
-                        error!("Could not open window: {:?}", err);
-                    }
                 },
                 // Process events affecting all windows.
                 WinitEvent::UserEvent(event @ Event { window_id: None, .. }) => {

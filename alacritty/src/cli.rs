@@ -1,4 +1,3 @@
-use std::cmp::max;
 use std::ops::{Deref, DerefMut};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -84,27 +83,6 @@ impl Options {
         options
     }
 
-    /// Override configuration file with options from the CLI.
-    pub fn override_config(&mut self, config: &mut UiConfig) {
-        #[cfg(unix)]
-        {
-            config.ipc_socket |= self.socket.is_some();
-        }
-
-        config.window.dynamic_title &= self.window_options.window_identity.title.is_none();
-        config.window.embed = self.embed.as_ref().and_then(|embed| parse_hex_or_decimal(embed));
-        config.debug.print_events |= self.print_events;
-        config.debug.log_level = max(config.debug.log_level, self.log_level());
-        config.debug.ref_test |= self.ref_test;
-
-        if config.debug.print_events {
-            config.debug.log_level = max(config.debug.log_level, LevelFilter::Info);
-        }
-
-        // Replace CLI options.
-        self.config_options.override_config(config);
-    }
-
     /// Logging filter level.
     pub fn log_level(&self) -> LevelFilter {
         match (self.quiet, self.verbose) {
@@ -138,14 +116,6 @@ fn parse_class(input: &str) -> Result<Class, String> {
     };
 
     Ok(Class::new(general, instance))
-}
-
-/// Convert to hex if possible, else decimal
-fn parse_hex_or_decimal(input: &str) -> Option<u32> {
-    input
-        .strip_prefix("0x")
-        .and_then(|value| u32::from_str_radix(value, 16).ok())
-        .or_else(|| input.parse().ok())
 }
 
 /// Terminal specific cli options which can be passed to new windows via IPC.

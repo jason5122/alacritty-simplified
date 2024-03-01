@@ -166,16 +166,6 @@ impl MessageBuffer {
         }
     }
 
-    /// Remove all messages with a specific target.
-    #[inline]
-    pub fn remove_target(&mut self, target: &str) {
-        self.messages = self
-            .messages
-            .drain(..)
-            .filter(|m| m.target().map(String::as_str) != Some(target))
-            .collect();
-    }
-
     /// Add a new message to the queue.
     #[inline]
     pub fn push(&mut self, message: Message) {
