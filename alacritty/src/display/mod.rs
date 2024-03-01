@@ -25,14 +25,10 @@ use unicode_width::UnicodeWidthChar;
 
 use alacritty_terminal::event::{EventListener, OnResize, WindowSize};
 use alacritty_terminal::grid::Dimensions as TermDimensions;
-use alacritty_terminal::index::{Column, Direction, Line, Point};
+use alacritty_terminal::index::Point;
 use alacritty_terminal::selection::Selection;
-use alacritty_terminal::term::cell::Flags;
-use alacritty_terminal::term::{
-    self, point_to_viewport, LineDamageBounds, Term, TermDamage, TermMode, MIN_COLUMNS,
-    MIN_SCREEN_LINES,
-};
-use alacritty_terminal::vte::ansi::{CursorShape, NamedColor};
+use alacritty_terminal::term::{Term, TermMode, MIN_COLUMNS, MIN_SCREEN_LINES};
+use alacritty_terminal::vte::ansi::NamedColor;
 
 use crate::config::font::Font;
 use crate::config::window::Dimensions;
@@ -40,19 +36,17 @@ use crate::config::window::Dimensions;
 use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::bell::VisualBell;
-use crate::display::color::{List, Rgb};
-use crate::display::content::{RenderableCell, RenderableContent, RenderableCursor};
+use crate::display::color::List;
+use crate::display::content::{RenderableCell, RenderableContent};
 use crate::display::cursor::IntoRects;
-use crate::display::damage::{damage_y_to_viewport_y, DamageTracker};
+use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
 use crate::display::meter::Meter;
 use crate::display::window::Window;
 use crate::event::{Event, EventType, Mouse, SearchState};
-use crate::message_bar::{MessageBuffer, MessageType};
-use crate::renderer::rects::{RenderLine, RenderLines, RenderRect};
+use crate::message_bar::MessageBuffer;
 use crate::renderer::{self, GlyphCache, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
-use crate::string::{ShortenDirection, StrShortener};
 
 pub mod color;
 pub mod content;
@@ -63,18 +57,6 @@ pub mod window;
 mod bell;
 mod damage;
 mod meter;
-
-/// Label for the forward terminal search bar.
-const FORWARD_SEARCH_LABEL: &str = "Search: ";
-
-/// Label for the backward terminal search bar.
-const BACKWARD_SEARCH_LABEL: &str = "Backward Search: ";
-
-/// The character used to shorten the visible text like uri preview or search regex.
-const SHORTENER: char = '…';
-
-/// Color which is used to highlight damaged rects when debugging.
-const DAMAGE_RECT_COLOR: Rgb = Rgb::new(255, 0, 255);
 
 #[derive(Debug)]
 pub enum Error {
@@ -732,16 +714,11 @@ impl Display {
 
             grid_cells.push(cell);
         }
-        let selection_range = content.selection_range();
         let background_color = content.color(NamedColor::Background as usize);
-        let display_offset = content.display_offset();
         let cursor = content.cursor();
 
         let metrics = self.glyph_cache.font_metrics();
         let size_info = self.size_info;
-
-        let vi_mode = terminal.mode().contains(TermMode::VI);
-        let vi_cursor_point = if vi_mode { Some(terminal.vi_mode_cursor.point) } else { None };
 
         // Drop terminal as early as possible to free lock.
         drop(terminal);
@@ -848,21 +825,6 @@ impl Display {
     #[inline]
     fn collect_damage(&self) -> bool {
         matches!(self.raw_window_handle, RawWindowHandle::Wayland(_)) || self.damage_tracker.debug
-    }
-
-    /// Highlight damaged rects.
-    ///
-    /// This function is for debug purposes only.
-    fn highlight_damage(&self, render_rects: &mut Vec<RenderRect>) {
-        for damage_rect in &self.damage_tracker.shape_frame_damage(self.size_info.into()) {
-            let x = damage_rect.x as f32;
-            let height = damage_rect.height as f32;
-            let width = damage_rect.width as f32;
-            let y = damage_y_to_viewport_y(&self.size_info, damage_rect) as f32;
-            let render_rect = RenderRect::new(x, y, width, height, DAMAGE_RECT_COLOR, 0.5);
-
-            render_rects.push(render_rect);
-        }
     }
 
     /// Request a new frame for a window on Wayland.

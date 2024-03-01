@@ -37,11 +37,8 @@ use winit::window::{
     WindowId,
 };
 
-use alacritty_terminal::index::Point;
-
 use crate::config::window::{Decorations, Identity, WindowConfig};
 use crate::config::UiConfig;
-use crate::display::SizeInfo;
 
 /// Window icon for `_NET_WM_ICON` property.
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
@@ -391,27 +388,6 @@ impl Window {
         if !self.is_x11 {
             self.window.set_ime_allowed(allowed);
         }
-    }
-
-    /// Adjust the IME editor position according to the new location of the cursor.
-    pub fn update_ime_position(&self, point: Point<usize>, size: &SizeInfo) {
-        // NOTE: X11 doesn't support cursor area, so we need to offset manually to not obscure
-        // the text.
-        let offset = if self.is_x11 { 1 } else { 0 };
-        let nspot_x = f64::from(size.padding_x() + point.column.0 as f32 * size.cell_width());
-        let nspot_y =
-            f64::from(size.padding_y() + (point.line + offset) as f32 * size.cell_height());
-
-        // NOTE: some compositors don't like excluding too much and try to render popup at the
-        // bottom right corner of the provided area, so exclude just the full-width char to not
-        // obscure the cursor and not render popup at the end of the window.
-        let width = size.cell_width() as f64 * 2.;
-        let height = size.cell_height as f64;
-
-        self.window.set_ime_cursor_area(
-            PhysicalPosition::new(nspot_x, nspot_y),
-            PhysicalSize::new(width, height),
-        );
     }
 
     /// Disable macOS window shadows.
