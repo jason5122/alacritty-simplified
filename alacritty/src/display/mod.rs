@@ -743,96 +743,25 @@ impl Display {
         let vi_mode = terminal.mode().contains(TermMode::VI);
         let vi_cursor_point = if vi_mode { Some(terminal.vi_mode_cursor.point) } else { None };
 
-        // Add damage from the terminal.
-        if self.collect_damage() {
-            match terminal.damage() {
-                TermDamage::Full => self.damage_tracker.frame().mark_fully_damaged(),
-                TermDamage::Partial(damaged_lines) => {
-                    for damage in damaged_lines {
-                        self.damage_tracker.frame().damage_line(damage);
-                    }
-                },
-            }
-            terminal.reset_damage();
-        }
-
         // Drop terminal as early as possible to free lock.
         drop(terminal);
-
-        // Add damage from alacritty's UI elements overlapping terminal.
-        if self.collect_damage() {
-            let requires_full_damage = self.visual_bell.intensity() != 0.
-                || self.hint_state.active()
-                || search_state.regex().is_some();
-
-            if requires_full_damage {
-                self.damage_tracker.frame().mark_fully_damaged();
-                self.damage_tracker.next_frame().mark_fully_damaged();
-            }
-
-            let vi_cursor_viewport_point =
-                vi_cursor_point.and_then(|cursor| point_to_viewport(display_offset, cursor));
-
-            self.damage_tracker.damage_vi_cursor(vi_cursor_viewport_point);
-            self.damage_tracker.damage_selection(selection_range, display_offset);
-        }
 
         // Make sure this window's OpenGL context is active.
         self.make_current();
 
         self.renderer.clear(background_color, config.window_opacity());
-        let mut lines = RenderLines::new();
-
-        // Optimize loop hint comparator.
-        let has_highlighted_hint =
-            self.highlighted_hint.is_some() || self.vi_highlighted_hint.is_some();
 
         // Draw grid.
         {
-            let _sampler = self.meter.sampler();
-
             // Ensure macOS hasn't reset our viewport.
             #[cfg(target_os = "macos")]
             self.renderer.set_viewport(&size_info);
 
             let glyph_cache = &mut self.glyph_cache;
-            let highlighted_hint = &self.highlighted_hint;
-            let vi_highlighted_hint = &self.vi_highlighted_hint;
-            let damage_tracker = &mut self.damage_tracker;
-
-            self.renderer.draw_cells(
-                &size_info,
-                glyph_cache,
-                grid_cells.into_iter().map(|mut cell| {
-                    // Underline hints hovered by mouse or vi mode cursor.
-                    let point = term::viewport_to_point(display_offset, cell.point);
-
-                    if has_highlighted_hint {
-                        let hyperlink =
-                            cell.extra.as_ref().and_then(|extra| extra.hyperlink.as_ref());
-                        if highlighted_hint
-                            .as_ref()
-                            .map_or(false, |hint| hint.should_highlight(point, hyperlink))
-                            || vi_highlighted_hint
-                                .as_ref()
-                                .map_or(false, |hint| hint.should_highlight(point, hyperlink))
-                        {
-                            cell.flags.insert(Flags::UNDERLINE);
-                            // Damage hints for the current and next frames.
-                            damage_tracker.frame().damage_point(cell.point);
-                            damage_tracker.next_frame().damage_point(cell.point);
-                        }
-                    }
-
-                    // Update underline/strikeout.
-                    lines.update(&cell);
-
-                    cell
-                }),
-            );
+            self.renderer.draw_cells(&size_info, glyph_cache, grid_cells.into_iter());
         }
 
-        let mut rects = lines.rects(&metrics, &size_info);
+        let mut rects = Vec::new();
 
         // Draw cursor.
         rects.extend(cursor.rects(&size_info, config.cursor.thickness()));
