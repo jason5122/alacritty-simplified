@@ -8,8 +8,6 @@ use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use glutin::config::GetGlConfig;
-use glutin::display::GetGlDisplay;
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 use glutin::platform::x11::X11GlConfigExt;
 use log::info;
@@ -112,60 +110,6 @@ impl WindowContext {
         let display = Display::new(window, gl_context, &config, false)?;
 
         Self::new(display, config, options, proxy)
-    }
-
-    /// Create additional context with the graphics platform other windows are using.
-    pub fn additional(
-        &self,
-        event_loop: &EventLoopWindowTarget<Event>,
-        proxy: EventLoopProxy<Event>,
-        config: Rc<UiConfig>,
-        options: WindowOptions,
-        config_overrides: ParsedOptions,
-    ) -> Result<Self, Box<dyn Error>> {
-        // Get any window and take its GL config and display to build a new context.
-        let (gl_display, gl_config) = {
-            let gl_context = self.display.gl_context();
-            (gl_context.display(), gl_context.config())
-        };
-
-        let mut identity = config.window.identity.clone();
-        options.window_identity.override_identity_config(&mut identity);
-
-        let window = Window::new(
-            event_loop,
-            &config,
-            &identity,
-            #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
-            gl_config.x11_visual(),
-            #[cfg(target_os = "macos")]
-            &options.window_tabbing_id,
-        )?;
-
-        // Create context.
-        let raw_window_handle = window.raw_window_handle();
-        let gl_context = renderer::platform::create_gl_context(
-            &gl_display,
-            &gl_config,
-            Some(raw_window_handle),
-        )?;
-
-        // Check if new window will be opened as a tab.
-        #[cfg(target_os = "macos")]
-        let tabbed = options.window_tabbing_id.is_some();
-        #[cfg(not(target_os = "macos"))]
-        let tabbed = false;
-
-        let display = Display::new(window, gl_context, &config, tabbed)?;
-
-        let mut window_context = Self::new(display, config, options, proxy)?;
-
-        // Set the config overrides at startup.
-        //
-        // These are already applied to `config`, so no update is necessary.
-        window_context.window_config = config_overrides;
-
-        Ok(window_context)
     }
 
     /// Create a new terminal window context.

@@ -1544,30 +1544,6 @@ impl Processor {
         Ok(())
     }
 
-    /// Create a new terminal window.
-    pub fn create_window(
-        &mut self,
-        event_loop: &EventLoopWindowTarget<Event>,
-        proxy: EventLoopProxy<Event>,
-        options: WindowOptions,
-    ) -> Result<(), Box<dyn Error>> {
-        let window = self.windows.iter().next().as_ref().unwrap().1;
-
-        // Overide config with CLI/IPC options.
-        let mut config_overrides = options.config_overrides();
-        #[cfg(unix)]
-        config_overrides.extend_from_slice(&self.global_ipc_options);
-        let mut config = self.config.clone();
-        config = config_overrides.override_config_rc(config);
-
-        #[allow(unused_mut)]
-        let mut window_context =
-            window.additional(event_loop, proxy, config, options, config_overrides)?;
-
-        self.windows.insert(window_context.id(), window_context);
-        Ok(())
-    }
-
     /// Run the event loop.
     ///
     /// The result is exit code generate from the loop.

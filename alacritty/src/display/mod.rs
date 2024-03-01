@@ -328,11 +328,6 @@ impl DisplayUpdate {
         self.font = Some(font);
         self.dirty = true;
     }
-
-    pub fn set_cursor_dirty(&mut self) {
-        self.cursor_dirty = true;
-        self.dirty = true;
-    }
 }
 
 /// The display wraps a window, font rasterizer, and GPU renderer.
@@ -530,17 +525,6 @@ impl Display {
     #[inline]
     pub fn gl_context(&self) -> &PossiblyCurrentContext {
         self.context.get()
-    }
-
-    pub fn make_not_current(&mut self) {
-        if self.context.get().is_current() {
-            self.context.replace_with(|context| {
-                context
-                    .make_not_current()
-                    .expect("failed to disable context")
-                    .treat_as_possibly_current()
-            });
-        }
     }
 
     pub fn make_current(&self) {
@@ -995,13 +979,6 @@ impl Display {
         }
 
         self.damage_tracker.swap_damage();
-    }
-
-    /// Update to a new configuration.
-    pub fn update_config(&mut self, config: &UiConfig) {
-        self.damage_tracker.debug = config.debug.highlight_damage;
-        self.visual_bell.update_config(&config.bell);
-        self.colors = List::from(&config.colors);
     }
 
     /// Update the mouse/vi mode cursor hint highlighting.
@@ -1463,11 +1440,6 @@ struct Replaceable<T>(Option<T>);
 impl<T> Replaceable<T> {
     pub fn new(inner: T) -> Self {
         Self(Some(inner))
-    }
-
-    /// Replace the contents of the container.
-    pub fn replace_with<F: FnMut(T) -> T>(&mut self, f: F) {
-        self.0 = self.0.take().map(f);
     }
 
     /// Get immutable access to the wrapped value.

@@ -3,12 +3,11 @@ use std::path::{Path, PathBuf};
 use std::result::Result as StdResult;
 use std::{env, fs, io};
 
-use log::{error, info, warn};
-use serde::Deserialize;
+use log::warn;
 use serde_yaml::Error as YamlError;
 use toml::de::Error as TomlError;
 use toml::ser::Error as TomlSeError;
-use toml::{Table, Value};
+use toml::Value;
 
 pub mod bell;
 pub mod color;
@@ -18,7 +17,6 @@ pub mod font;
 pub mod monitor;
 pub mod scrolling;
 pub mod selection;
-pub mod serde_utils;
 pub mod terminal;
 pub mod ui_config;
 pub mod window;
@@ -124,34 +122,6 @@ impl From<YamlError> for Error {
     }
 }
 
-/// Deserialize configuration file from path.
-fn read_config(path: &Path) -> Result<UiConfig> {
-    let mut config_paths = Vec::new();
-    let config_value = parse_config(path, &mut config_paths, IMPORT_RECURSION_LIMIT)?;
-
-    // Deserialize to concrete type.
-    let mut config = UiConfig::deserialize(config_value)?;
-    config.config_paths = config_paths;
-
-    Ok(config)
-}
-
-/// Deserialize all configuration files as generic Value.
-fn parse_config(
-    path: &Path,
-    config_paths: &mut Vec<PathBuf>,
-    recursion_limit: usize,
-) -> Result<Value> {
-    config_paths.push(path.to_owned());
-
-    // Deserialize the configuration file.
-    let config = deserialize_config(path, false)?;
-
-    // Merge config with imports.
-    let imports = load_imports(&config, config_paths, recursion_limit);
-    Ok(serde_utils::merge(imports, config))
-}
-
 /// Deserialize a configuration file.
 pub fn deserialize_config(path: &Path, warn_pruned: bool) -> Result<Value> {
     let mut contents = fs::read_to_string(path)?;
@@ -177,44 +147,6 @@ pub fn deserialize_config(path: &Path, warn_pruned: bool) -> Result<Value> {
     let config: Value = toml::from_str(&contents)?;
 
     Ok(config)
-}
-
-/// Load all referenced configuration files.
-fn load_imports(config: &Value, config_paths: &mut Vec<PathBuf>, recursion_limit: usize) -> Value {
-    // Get paths for all imports.
-    let import_paths = match imports(config, recursion_limit) {
-        Ok(import_paths) => import_paths,
-        Err(err) => {
-            error!(target: LOG_TARGET_CONFIG, "{err}");
-            return Value::Table(Table::new());
-        },
-    };
-
-    // Parse configs for all imports recursively.
-    let mut merged = Value::Table(Table::new());
-    for import_path in import_paths {
-        let path = match import_path {
-            Ok(path) => path,
-            Err(err) => {
-                error!(target: LOG_TARGET_CONFIG, "{err}");
-                continue;
-            },
-        };
-
-        if !path.exists() {
-            info!(target: LOG_TARGET_CONFIG, "Config import not found:\n  {:?}", path.display());
-            continue;
-        }
-
-        match parse_config(&path, config_paths, recursion_limit - 1) {
-            Ok(config) => merged = serde_utils::merge(merged, config),
-            Err(err) => {
-                error!(target: LOG_TARGET_CONFIG, "Unable to import config {:?}: {}", path, err)
-            },
-        }
-    }
-
-    merged
 }
 
 // TODO: Merge back with `load_imports` once `alacritty migrate` is dropped.

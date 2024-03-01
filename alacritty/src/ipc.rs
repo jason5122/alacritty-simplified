@@ -1,82 +1,13 @@
-//! Alacritty socket IPC.
-
 use std::ffi::OsStr;
-use std::io::{BufRead, BufReader, Error as IoError, ErrorKind, Result as IoResult, Write};
-use std::os::unix::net::{UnixListener, UnixStream};
+use std::io::{Error as IoError, ErrorKind, Result as IoResult, Write};
+use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
-use std::{env, fs, process};
+use std::{env, fs};
 
-use log::warn;
-use winit::event_loop::EventLoopProxy;
-use winit::window::WindowId;
-
-use alacritty_terminal::thread;
-
-use crate::cli::{Options, SocketMessage};
-use crate::event::{Event, EventType};
+use crate::cli::SocketMessage;
 
 /// Environment variable name for the IPC socket path.
 const ALACRITTY_SOCKET_ENV: &str = "ALACRITTY_SOCKET";
-
-/// Create an IPC socket.
-pub fn spawn_ipc_socket(options: &Options, event_proxy: EventLoopProxy<Event>) -> Option<PathBuf> {
-    // Create the IPC socket and export its path as env variable if necessary.
-    let socket_path = options.socket.clone().unwrap_or_else(|| {
-        let mut path = socket_dir();
-        path.push(format!("{}-{}.sock", socket_prefix(), process::id()));
-        path
-    });
-    env::set_var(ALACRITTY_SOCKET_ENV, socket_path.as_os_str());
-
-    let listener = match UnixListener::bind(&socket_path) {
-        Ok(listener) => listener,
-        Err(err) => {
-            warn!("Unable to create socket: {:?}", err);
-            return None;
-        },
-    };
-
-    // Spawn a thread to listen on the IPC socket.
-    thread::spawn_named("socket listener", move || {
-        let mut data = String::new();
-        for stream in listener.incoming().filter_map(Result::ok) {
-            data.clear();
-            let mut stream = BufReader::new(stream);
-
-            match stream.read_line(&mut data) {
-                Ok(0) | Err(_) => continue,
-                Ok(_) => (),
-            };
-
-            // Read pending events on socket.
-            let message: SocketMessage = match serde_json::from_str(&data) {
-                Ok(message) => message,
-                Err(err) => {
-                    warn!("Failed to convert data from socket: {}", err);
-                    continue;
-                },
-            };
-
-            // Handle IPC events.
-            match message {
-                SocketMessage::CreateWindow(options) => {
-                    let event = Event::new(EventType::CreateWindow(options), None);
-                    let _ = event_proxy.send_event(event);
-                },
-                SocketMessage::Config(ipc_config) => {
-                    let window_id = ipc_config
-                        .window_id
-                        .and_then(|id| u64::try_from(id).ok())
-                        .map(WindowId::from);
-                    let event = Event::new(EventType::IpcConfig(ipc_config), window_id);
-                    let _ = event_proxy.send_event(event);
-                },
-            }
-        }
-    });
-
-    Some(socket_path)
-}
 
 /// Send a message to the active Alacritty socket.
 pub fn send_message(socket: Option<PathBuf>, message: SocketMessage) -> IoResult<()> {

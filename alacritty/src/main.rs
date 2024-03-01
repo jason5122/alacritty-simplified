@@ -12,12 +12,9 @@
 #[cfg(not(any(feature = "x11", feature = "wayland", target_os = "macos", windows)))]
 compile_error!(r#"at least one of the "x11"/"wayland" features must be enabled"#);
 
+use std::env;
 use std::error::Error;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use std::{env, fs};
 
-use log::info;
 #[cfg(windows)]
 use windows_sys::Win32::System::Console::{AttachConsole, FreeConsole, ATTACH_PARENT_PROCESS};
 use winit::event_loop::EventLoopBuilder as WinitEventLoopBuilder;
@@ -91,32 +88,6 @@ fn msg(options: MessageOptions) -> Result<(), Box<dyn Error>> {
     ipc::send_message(options.socket, options.message).map_err(|err| err.into())
 }
 
-/// Temporary files stored for Alacritty.
-///
-/// This stores temporary files to automate their destruction through its `Drop` implementation.
-struct TemporaryFiles {
-    #[cfg(unix)]
-    socket_path: Option<PathBuf>,
-    log_file: Option<PathBuf>,
-}
-
-impl Drop for TemporaryFiles {
-    fn drop(&mut self) {
-        // Clean up the IPC socket file.
-        #[cfg(unix)]
-        if let Some(socket_path) = &self.socket_path {
-            let _ = fs::remove_file(socket_path);
-        }
-
-        // Clean up logfile.
-        if let Some(log_file) = &self.log_file {
-            if fs::remove_file(log_file).is_ok() {
-                let _ = writeln!(io::stdout(), "Deleted log file at \"{}\"", log_file.display());
-            }
-        }
-    }
-}
-
 /// Run main Alacritty entrypoint.
 ///
 /// Creates a window, the terminal state, PTY, I/O event loop, input processor,
@@ -125,24 +96,7 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
     // Setup winit event loop.
     let window_event_loop = WinitEventLoopBuilder::<Event>::with_user_event().build()?;
 
-    // Initialize the logger as soon as possible as to capture output from other subsystems.
-    let log_file = logging::initialize(&options, window_event_loop.create_proxy())
-        .expect("Unable to initialize logger");
-
-    info!("Welcome to Alacritty");
-    info!("Version {}", env!("VERSION"));
-
-    #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
-    info!("Running on {}", if window_event_loop.is_x11() { "X11" } else { "Wayland" });
-    #[cfg(not(any(feature = "x11", target_os = "macos", windows)))]
-    info!("Running on Wayland");
-
-    // Load configuration file.
-    // let config = config::load(&mut options);
     let config = UiConfig::default();
-
-    // Update the log level from config.
-    log::set_max_level(config.debug.log_level);
 
     // Set tty environment variables.
     tty::setup_env();
@@ -168,22 +122,6 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
         monitor::watch(config.config_paths.clone(), window_event_loop.create_proxy());
     }
 
-    // Create the IPC socket listener.
-    #[cfg(unix)]
-    let socket_path = if config.ipc_socket {
-        ipc::spawn_ipc_socket(&options, window_event_loop.create_proxy())
-    } else {
-        None
-    };
-
-    // Setup automatic RAII cleanup for our files.
-    let log_cleanup = log_file.filter(|_| !config.debug.persistent_logging);
-    let _files = TemporaryFiles {
-        #[cfg(unix)]
-        socket_path,
-        log_file: log_cleanup,
-    };
-
     // Event processor.
     let window_options = options.window_options.clone();
     let mut processor = Processor::new(config, options, &window_event_loop);
@@ -204,16 +142,11 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
     // FIXME: Change PTY API to enforce the correct drop order with the typesystem.
     drop(processor);
 
-    // FIXME patch notify library to have a shutdown method.
-    // config_reloader.join().ok();
-
     // Without explicitly detaching the console cmd won't redraw it's prompt.
     #[cfg(windows)]
     unsafe {
         FreeConsole();
     }
-
-    info!("Goodbye");
 
     result
 }

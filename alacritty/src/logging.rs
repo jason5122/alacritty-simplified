@@ -15,7 +15,6 @@ use std::{env, process};
 use log::{self, Level, LevelFilter};
 use winit::event_loop::EventLoopProxy;
 
-use crate::cli::Options;
 use crate::event::{Event, EventType};
 use crate::message_bar::{Message, MessageType};
 
@@ -53,20 +52,6 @@ const ALLOWED_TARGETS: &[&str] = &[
     "crossfont",
 ];
 
-/// Initialize the logger to its defaults.
-pub fn initialize(
-    options: &Options,
-    event_proxy: EventLoopProxy<Event>,
-) -> Result<Option<PathBuf>, log::SetLoggerError> {
-    log::set_max_level(options.log_level());
-
-    let logger = Logger::new(event_proxy);
-    let path = logger.file_path();
-    log::set_boxed_logger(Box::new(logger))?;
-
-    Ok(path)
-}
-
 pub struct Logger {
     logfile: Mutex<OnDemandLogFile>,
     stdout: Mutex<LineWriter<Stdout>>,
@@ -75,21 +60,6 @@ pub struct Logger {
 }
 
 impl Logger {
-    fn new(event_proxy: EventLoopProxy<Event>) -> Self {
-        let logfile = Mutex::new(OnDemandLogFile::new());
-        let stdout = Mutex::new(LineWriter::new(io::stdout()));
-
-        Logger { logfile, stdout, event_proxy: Mutex::new(event_proxy), start: Instant::now() }
-    }
-
-    fn file_path(&self) -> Option<PathBuf> {
-        if let Ok(logfile) = self.logfile.lock() {
-            Some(logfile.path().clone())
-        } else {
-            None
-        }
-    }
-
     /// Log a record to the message bar.
     fn message_bar_log(&self, record: &log::Record<'_>, logfile_path: &str) {
         let message_type = match record.level() {
