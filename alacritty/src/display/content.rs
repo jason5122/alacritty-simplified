@@ -43,18 +43,6 @@ impl<'a> RenderableContent<'a> {
     ) -> Self {
         let terminal_content = term.renderable_content();
 
-        // Convert terminal cursor point to viewport position.
-        let cursor_point = terminal_content.cursor.point;
-        let display_offset = terminal_content.display_offset;
-        let cursor_point = term::point_to_viewport(display_offset, cursor_point).unwrap();
-
-        let hint = if display.hint_state.active() {
-            display.hint_state.update_matches(term);
-            Some(Hint::from(&display.hint_state))
-        } else {
-            None
-        };
-
         Self {
             colors: &display.colors,
             size: &display.size_info,
@@ -62,10 +50,10 @@ impl<'a> RenderableContent<'a> {
             terminal_content,
             focused_match: None,
             cursor_shape: CursorShape::Block,
-            cursor_point,
+            cursor_point: Point::new(2, Column(2)),
             search: None,
             config,
-            hint,
+            hint: None,
         }
     }
 
