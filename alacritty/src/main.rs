@@ -30,13 +30,10 @@ mod daemon;
 mod display;
 mod event;
 mod input;
-#[cfg(unix)]
-mod ipc;
 mod logging;
 #[cfg(target_os = "macos")]
 mod macos;
 mod message_bar;
-mod migrate;
 #[cfg(windows)]
 mod panic;
 mod renderer;
@@ -49,43 +46,17 @@ mod gl {
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
 }
 
-#[cfg(unix)]
-use crate::cli::MessageOptions;
-use crate::cli::{Options, Subcommands};
+use crate::cli::Options;
 use crate::config::{monitor, UiConfig};
 use crate::event::{Event, Processor};
 #[cfg(target_os = "macos")]
 use crate::macos::locale;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    #[cfg(windows)]
-    panic::attach_handler();
-
-    // When linked with the windows subsystem windows won't automatically attach
-    // to the console of the parent process, so we do it explicitly. This fails
-    // silently if the parent has no console.
-    #[cfg(windows)]
-    unsafe {
-        AttachConsole(ATTACH_PARENT_PROCESS);
-    }
-
-    // Load command line options.
     let options = Options::new();
-
-    match options.subcommands {
-        #[cfg(unix)]
-        Some(Subcommands::Msg(options)) => msg(options)?,
-        Some(Subcommands::Migrate(options)) => migrate::migrate(options),
-        None => alacritty(options)?,
-    }
+    alacritty(options)?;
 
     Ok(())
-}
-
-/// `msg` subcommand entrypoint.
-#[cfg(unix)]
-fn msg(options: MessageOptions) -> Result<(), Box<dyn Error>> {
-    ipc::send_message(options.socket, options.message).map_err(|err| err.into())
 }
 
 /// Run main Alacritty entrypoint.
