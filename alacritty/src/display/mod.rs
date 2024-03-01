@@ -41,7 +41,7 @@ use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::bell::VisualBell;
 use crate::display::color::{List, Rgb};
-use crate::display::content::{RenderableContent, RenderableCursor};
+use crate::display::content::{RenderableCell, RenderableContent, RenderableCursor};
 use crate::display::cursor::IntoRects;
 use crate::display::damage::{damage_y_to_viewport_y, DamageTracker};
 use crate::display::hint::{HintMatch, HintState};
@@ -711,8 +711,25 @@ impl Display {
     ) {
         // Collect renderable content before the terminal is dropped.
         let mut content = RenderableContent::new(config, self, &terminal);
-        let mut grid_cells = Vec::new();
+
+        // let mut i = 0;
+        let mut grid_cells: Vec<RenderableCell> = Vec::new();
         for cell in &mut content {
+            // let custom_cell = RenderableCell {
+            //     character: 'A',
+            //     point: Point::new(1, Column(i)),
+            //     fg: cell.fg,
+            //     bg: cell.bg,
+            //     bg_alpha: 1.0,
+            //     underline: cell.underline,
+            //     flags: Flags::empty(),
+            //     extra: None,
+            // };
+            // println!("{:?}", custom_cell);
+            // grid_cells.push(custom_cell);
+
+            // i += 1;
+
             grid_cells.push(cell);
         }
         let selection_range = content.selection_range();
