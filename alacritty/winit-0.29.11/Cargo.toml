@@ -49,7 +49,7 @@ wayland = [
   "wayland-backend",
   "wayland-protocols",
   "wayland-protocols-plasma",
-  "smithay-client-toolkit",
+  "sctk",
   "ahash",
   "memmap2",
 ]
@@ -167,7 +167,7 @@ libc = "0.2.64"
 memmap2 = { version = "0.9.0", optional = true }
 percent-encoding = { version = "2.0", optional = true }
 rustix = { version = "0.38.4", default-features = false, features = ["std", "system", "thread", "process"] }
-smithay-client-toolkit = { version = "0.18.0", default-features = false, features = ["calloop"], optional = true }
+sctk = { package = "smithay-client-toolkit", version = "0.18.0", default-features = false, features = ["calloop"], optional = true }
 sctk-adwaita = { version = "0.8.0", default_features = false, optional = true }
 wayland-backend = { version = "0.3.0", default_features = false, features = ["client_system"], optional = true }
 wayland-client = { version = "0.31.1", optional = true }
