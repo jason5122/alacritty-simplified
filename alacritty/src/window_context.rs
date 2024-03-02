@@ -1,8 +1,6 @@
 //! Terminal window context.
 
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
 #[cfg(not(windows))]
 use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
@@ -12,18 +10,15 @@ use std::sync::Arc;
 use glutin::platform::x11::X11GlConfigExt;
 use log::info;
 use raw_window_handle::HasRawDisplayHandle;
-use serde_json as json;
-use winit::event::{Event as WinitEvent, Modifiers, WindowEvent};
+use winit::event::{Event as WinitEvent, WindowEvent};
 use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
 use alacritty_terminal::event::Event as TerminalEvent;
 use alacritty_terminal::event_loop::{EventLoop as PtyEventLoop, Msg, Notifier};
-use alacritty_terminal::grid::{Dimensions, Scroll};
-use alacritty_terminal::index::Direction;
+use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::sync::FairMutex;
-use alacritty_terminal::term::test::TermSize;
-use alacritty_terminal::term::{Term, TermMode};
+use alacritty_terminal::term::Term;
 use alacritty_terminal::tty;
 
 use crate::cli::WindowOptions;

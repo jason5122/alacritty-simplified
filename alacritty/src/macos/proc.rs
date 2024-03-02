@@ -51,7 +51,7 @@ impl From<IntoStringError> for Error {
 /// Bindings for libproc.
 #[allow(non_camel_case_types)]
 mod sys {
-    use std::os::raw::{c_char, c_int, c_longlong, c_void};
+    use std::os::raw::{c_char, c_int, c_longlong};
 
     type gid_t = c_int;
     type off_t = c_longlong;

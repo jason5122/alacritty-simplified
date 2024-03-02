@@ -1,20 +1,17 @@
 //! Process window events.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Debug;
 #[cfg(not(windows))]
 use std::os::unix::io::RawFd;
 use std::rc::Rc;
-use std::time::Instant;
 use std::{f32, mem};
 
 use ahash::RandomState;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
 use log::info;
-use winit::event::{
-    ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, WindowEvent,
-};
+use winit::event::{Event as WinitEvent, StartCause, WindowEvent};
 use winit::event_loop::{
     ControlFlow, DeviceEvents, EventLoop, EventLoopProxy, EventLoopWindowTarget,
 };
@@ -23,8 +20,6 @@ use winit::window::WindowId;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener, Notify};
 use alacritty_terminal::event_loop::Notifier;
 use alacritty_terminal::grid::Scroll;
-use alacritty_terminal::index::{Direction, Point, Side};
-use alacritty_terminal::term::search::{Match, RegexSearch};
 use alacritty_terminal::term::Term;
 
 use crate::cli::WindowOptions;

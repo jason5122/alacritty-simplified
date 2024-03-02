@@ -257,13 +257,6 @@ impl Default for Hints {
     }
 }
 
-impl Hints {
-    /// Characters for the hint labels.
-    pub fn alphabet(&self) -> &str {
-        &self.alphabet.0
-    }
-}
-
 #[derive(SerdeReplace, Clone, Debug, PartialEq, Eq)]
 struct HintsAlphabet(String);
 

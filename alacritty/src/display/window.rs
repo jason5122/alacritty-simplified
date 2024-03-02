@@ -218,14 +218,6 @@ impl Window {
         }
     }
 
-    /// Set mouse cursor visible.
-    pub fn set_mouse_visible(&mut self, visible: bool) {
-        if visible != self.mouse_visible {
-            self.mouse_visible = visible;
-            self.window.set_cursor_visible(visible);
-        }
-    }
-
     #[cfg(not(any(target_os = "macos", windows)))]
     pub fn get_platform_window(
         identity: &Identity,
@@ -323,13 +315,6 @@ impl Window {
     #[cfg(target_os = "macos")]
     pub fn set_simple_fullscreen(&self, simple_fullscreen: bool) {
         self.window.set_simple_fullscreen(simple_fullscreen);
-    }
-
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        // Skip runtime IME manipulation on X11 since it breaks some IMEs.
-        if !self.is_x11 {
-            self.window.set_ime_allowed(allowed);
-        }
     }
 
     /// Disable macOS window shadows.

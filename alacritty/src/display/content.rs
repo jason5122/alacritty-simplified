@@ -1,9 +1,7 @@
-use std::borrow::Cow;
-use std::ops::Deref;
-use std::{cmp, mem};
+use std::mem;
 
-use alacritty_terminal::grid::{Dimensions, Indexed};
-use alacritty_terminal::index::{Column, Line, Point};
+use alacritty_terminal::grid::Indexed;
+use alacritty_terminal::index::Point;
 use alacritty_terminal::term::cell::{Cell, Flags, Hyperlink};
 use alacritty_terminal::term::search::Match;
 use alacritty_terminal::term::{self, RenderableContent as TerminalContent, TermMode};
@@ -140,21 +138,9 @@ impl RenderableCell {
             Self::compute_bg_alpha(content.config, cell.bg)
         };
 
-        let is_selected = content.terminal_content.selection.map_or(false, |selection| {
-            selection.contains_cell(
-                &cell,
-                content.terminal_content.cursor.point,
-                content.cursor_shape,
-            )
-        });
-
         let display_offset = content.terminal_content.display_offset;
-        let viewport_start = Point::new(Line(-(display_offset as i32)), Column(0));
-        let colors = &content.config.colors;
-        let mut character = cell.c;
-        let mut flags = cell.flags;
-
-        let num_cols = content.size.columns();
+        let character = cell.c;
+        let flags = cell.flags;
 
         // Apply transparency to all renderable cells if `transparent_background_colors` is set
         if bg_alpha > 0. && content.config.colors.transparent_background_colors {
@@ -188,22 +174,6 @@ impl RenderableCell {
             && self.character == ' '
             && self.extra.is_none()
             && !self.flags.intersects(Flags::ALL_UNDERLINES | Flags::STRIKEOUT)
-    }
-
-    /// Apply [`CellRgb`] colors to the cell's colors.
-    fn compute_cell_rgb(
-        cell_fg: &mut Rgb,
-        cell_bg: &mut Rgb,
-        bg_alpha: &mut f32,
-        fg: CellRgb,
-        bg: CellRgb,
-    ) {
-        let old_fg = mem::replace(cell_fg, fg.color(*cell_fg, *cell_bg));
-        *cell_bg = bg.color(old_fg, *cell_bg);
-
-        if bg != CellRgb::CellBackground {
-            *bg_alpha = 1.0;
-        }
     }
 
     /// Get the RGB color from a cell's foreground color.
