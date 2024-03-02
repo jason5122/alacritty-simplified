@@ -29,14 +29,13 @@ use winit::window::CursorIcon;
 use alacritty_terminal::event::EventListener;
 use alacritty_terminal::grid::{Dimensions, Scroll};
 use alacritty_terminal::index::{Boundary, Column, Direction, Point, Side};
-use alacritty_terminal::selection::SelectionType;
 use alacritty_terminal::term::search::Match;
 use alacritty_terminal::term::{ClipboardType, Term, TermMode};
 use alacritty_terminal::vi_mode::ViMotion;
 use alacritty_terminal::vte::ansi::{ClearMode, Handler};
 
 use crate::clipboard::Clipboard;
-use crate::config::{Action, BindingMode, MouseAction, SearchAction, UiConfig, ViAction};
+use crate::config::{Action, BindingMode, SearchAction, UiConfig, ViAction};
 use crate::display::hint::HintMatch;
 use crate::display::window::Window;
 use crate::display::{Display, SizeInfo};
@@ -78,12 +77,6 @@ pub trait ActionContext<T: EventListener> {
     fn write_to_pty<B: Into<Cow<'static, [u8]>>>(&self, _data: B) {}
     fn mark_dirty(&mut self) {}
     fn size_info(&self) -> SizeInfo;
-    fn copy_selection(&mut self, _ty: ClipboardType) {}
-    fn start_selection(&mut self, _ty: SelectionType, _point: Point, _side: Side) {}
-    fn toggle_selection(&mut self, _ty: SelectionType, _point: Point, _side: Side) {}
-    fn update_selection(&mut self, _point: Point, _side: Side) {}
-    fn clear_selection(&mut self) {}
-    fn selection_is_empty(&self) -> bool;
     fn mouse_mut(&mut self) -> &mut Mouse;
     fn mouse(&self) -> &Mouse;
     fn touch_purpose(&mut self) -> &mut TouchPurpose;
@@ -126,7 +119,6 @@ pub trait ActionContext<T: EventListener> {
     fn inline_search_previous(&mut self) {}
     fn hint_input(&mut self, _character: char) {}
     fn trigger_hint(&mut self, _hint: &HintMatch) {}
-    fn expand_selection(&mut self) {}
     fn on_terminal_input_start(&mut self) {}
     fn paste(&mut self, _text: &str, _bracketed: bool) {}
     fn spawn_daemon<I, S>(&self, _program: &str, _args: I)
@@ -138,13 +130,11 @@ pub trait ActionContext<T: EventListener> {
 }
 
 impl Action {
-    fn toggle_selection<T, A>(ctx: &mut A, ty: SelectionType)
+    fn toggle_selection<T, A>(ctx: &mut A)
     where
         A: ActionContext<T>,
         T: EventListener,
     {
-        ctx.toggle_selection(ty, ctx.terminal().vi_mode_cursor.point, Side::Left);
-
         // Make sure initial selection is not empty.
         if let Some(selection) = &mut ctx.terminal_mut().selection {
             selection.include_all();
@@ -177,16 +167,16 @@ impl<T: EventListener> Execute<T> for Action {
                 ctx.mark_dirty();
             },
             Action::Vi(ViAction::ToggleNormalSelection) => {
-                Self::toggle_selection(ctx, SelectionType::Simple);
+                Self::toggle_selection(ctx);
             },
             Action::Vi(ViAction::ToggleLineSelection) => {
-                Self::toggle_selection(ctx, SelectionType::Lines);
+                Self::toggle_selection(ctx);
             },
             Action::Vi(ViAction::ToggleBlockSelection) => {
-                Self::toggle_selection(ctx, SelectionType::Block);
+                Self::toggle_selection(ctx);
             },
             Action::Vi(ViAction::ToggleSemanticSelection) => {
-                Self::toggle_selection(ctx, SelectionType::Semantic);
+                Self::toggle_selection(ctx);
             },
             Action::Vi(ViAction::Open) => {
                 let hint = ctx.display().vi_highlighted_hint.take();
@@ -289,13 +279,8 @@ impl<T: EventListener> Execute<T> for Action {
             Action::Search(SearchAction::SearchDeleteWord) => ctx.search_pop_word(),
             Action::Search(SearchAction::SearchHistoryPrevious) => ctx.search_history_previous(),
             Action::Search(SearchAction::SearchHistoryNext) => ctx.search_history_next(),
-            Action::Mouse(MouseAction::ExpandSelection) => ctx.expand_selection(),
             Action::SearchForward => ctx.start_search(Direction::Right),
             Action::SearchBackward => ctx.start_search(Direction::Left),
-            Action::Copy => ctx.copy_selection(ClipboardType::Clipboard),
-            #[cfg(not(any(target_os = "macos", windows)))]
-            Action::CopySelection => ctx.copy_selection(ClipboardType::Selection),
-            Action::ClearSelection => ctx.clear_selection(),
             Action::Paste => {
                 let text = ctx.clipboard_mut().load(ClipboardType::Clipboard);
                 ctx.paste(&text, true);
@@ -424,7 +409,7 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
 
         let lmb_pressed = self.ctx.mouse().left_button_state == ElementState::Pressed;
         let rmb_pressed = self.ctx.mouse().right_button_state == ElementState::Pressed;
-        if !self.ctx.selection_is_empty() && (lmb_pressed || rmb_pressed) {
+        if lmb_pressed || rmb_pressed {
             self.update_selection_scrolling(y);
         }
 
@@ -463,11 +448,7 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
         // Don't launch URLs if mouse has moved.
         self.ctx.mouse_mut().block_hint_launcher = true;
 
-        if (lmb_pressed || rmb_pressed)
-            && (self.ctx.modifiers().state().shift_key() || !self.ctx.mouse_mode())
-        {
-            self.ctx.update_selection(point, cell_side);
-        } else if cell_changed
+        if cell_changed
             && self.ctx.terminal().mode().intersects(TermMode::MOUSE_MOTION | TermMode::MOUSE_DRAG)
         {
             if lmb_pressed {
@@ -624,29 +605,13 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
 
     /// Handle left click selection and vi mode cursor movement.
     fn on_left_click(&mut self, point: Point) {
-        let side = self.ctx.mouse().cell_side;
-
         match self.ctx.mouse().click_state {
-            ClickState::Click => {
-                // Don't launch URLs if this click cleared the selection.
-                self.ctx.mouse_mut().block_hint_launcher = !self.ctx.selection_is_empty();
-
-                self.ctx.clear_selection();
-
-                // Start new empty selection.
-                if self.ctx.modifiers().state().control_key() {
-                    self.ctx.start_selection(SelectionType::Block, point, side);
-                } else {
-                    self.ctx.start_selection(SelectionType::Simple, point, side);
-                }
-            },
+            ClickState::Click => {},
             ClickState::DoubleClick => {
                 self.ctx.mouse_mut().block_hint_launcher = true;
-                self.ctx.start_selection(SelectionType::Semantic, point, side);
             },
             ClickState::TripleClick => {
                 self.ctx.mouse_mut().block_hint_launcher = true;
-                self.ctx.start_selection(SelectionType::Lines, point, side);
             },
             ClickState::None => (),
         };
@@ -680,11 +645,6 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
 
         let timer_id = TimerId::new(Topic::SelectionScrolling, self.ctx.window().id());
         self.ctx.scheduler_mut().unschedule(timer_id);
-
-        if let MouseButton::Left | MouseButton::Right = button {
-            // Copy selection on release, to prevent flooding the display server.
-            self.ctx.copy_selection(ClipboardType::Selection);
-        }
     }
 
     pub fn mouse_wheel_input(&mut self, delta: MouseScrollDelta, phase: TouchPhase) {

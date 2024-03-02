@@ -30,7 +30,6 @@ use alacritty_terminal::event::{Event as TerminalEvent, EventListener, Notify};
 use alacritty_terminal::event_loop::Notifier;
 use alacritty_terminal::grid::{BidirectionalIterator, Dimensions, Scroll};
 use alacritty_terminal::index::{Boundary, Column, Direction, Line, Point, Side};
-use alacritty_terminal::selection::{Selection, SelectionType};
 use alacritty_terminal::term::search::{Match, RegexSearch};
 use alacritty_terminal::term::{self, ClipboardType, Term, TermMode};
 
@@ -236,17 +235,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
 
         let vi_mode = self.terminal.mode().contains(TermMode::VI);
 
-        // Update selection.
-        if vi_mode && self.terminal.selection.as_ref().map_or(false, |s| !s.is_empty()) {
-            self.update_selection(self.terminal.vi_mode_cursor.point, Side::Right);
-        } else if self.mouse.left_button_state == ElementState::Pressed
-            || self.mouse.right_button_state == ElementState::Pressed
-        {
-            let display_offset = self.terminal.grid().display_offset();
-            let point = self.mouse.point(&self.size_info(), display_offset);
-            self.update_selection(point, self.mouse.cell_side);
-        }
-
         // Scrolling inside Vi mode moves the cursor, so start typing.
         if vi_mode {
             self.on_typing_start();
@@ -255,74 +243,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
         // Update dirty if actually scrolled or moved Vi cursor in Vi mode.
         *self.dirty |=
             lines_changed != 0 || (vi_mode && old_vi_cursor != self.terminal.vi_mode_cursor);
-    }
-
-    // Copy text selection.
-    fn copy_selection(&mut self, ty: ClipboardType) {
-        let text = match self.terminal.selection_to_string().filter(|s| !s.is_empty()) {
-            Some(text) => text,
-            None => return,
-        };
-
-        if ty == ClipboardType::Selection && self.config.selection.save_to_clipboard {
-            self.clipboard.store(ClipboardType::Clipboard, text.clone());
-        }
-        self.clipboard.store(ty, text);
-    }
-
-    fn selection_is_empty(&self) -> bool {
-        self.terminal.selection.as_ref().map_or(true, Selection::is_empty)
-    }
-
-    fn clear_selection(&mut self) {
-        // Clear the selection on the terminal.
-        let selection = self.terminal.selection.take();
-        // Mark the terminal as dirty when selection wasn't empty.
-        *self.dirty |= selection.map_or(false, |s| !s.is_empty());
-    }
-
-    fn update_selection(&mut self, mut point: Point, side: Side) {
-        let mut selection = match self.terminal.selection.take() {
-            Some(selection) => selection,
-            None => return,
-        };
-
-        // Treat motion over message bar like motion over the last line.
-        point.line = min(point.line, self.terminal.bottommost_line());
-
-        // Update selection.
-        selection.update(point, side);
-
-        // Move vi cursor and expand selection.
-        if self.terminal.mode().contains(TermMode::VI) && !self.search_active() {
-            self.terminal.vi_mode_cursor.point = point;
-            selection.include_all();
-        }
-
-        self.terminal.selection = Some(selection);
-        *self.dirty = true;
-    }
-
-    fn start_selection(&mut self, ty: SelectionType, point: Point, side: Side) {
-        self.terminal.selection = Some(Selection::new(ty, point, side));
-        *self.dirty = true;
-
-        self.copy_selection(ClipboardType::Selection);
-    }
-
-    fn toggle_selection(&mut self, ty: SelectionType, point: Point, side: Side) {
-        match &mut self.terminal.selection {
-            Some(selection) if selection.ty == ty && !selection.is_empty() => {
-                self.clear_selection();
-            },
-            Some(selection) if !selection.is_empty() => {
-                selection.ty = ty;
-                *self.dirty = true;
-
-                self.copy_selection(ClipboardType::Selection);
-            },
-            _ => self.start_selection(ty, point, side),
-        }
     }
 
     #[inline]
@@ -512,13 +432,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
         if self.terminal.mode().contains(TermMode::VI) {
             // Recover pre-search state in vi mode.
             self.search_reset_state();
-        } else if let Some(focused_match) = &self.search_state.focused_match {
-            // Create a selection for the focused match.
-            let start = *focused_match.start();
-            let end = *focused_match.end();
-            self.start_selection(SelectionType::Simple, start, Side::Left);
-            self.update_selection(end, Side::Right);
-            self.copy_selection(ClipboardType::Selection);
         }
 
         self.search_state.dfas = None;
@@ -704,11 +617,7 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
             // Write the text to the PTY/search.
             HintAction::Action(HintInternalAction::Paste) => self.paste(&text, true),
             // Select the text.
-            HintAction::Action(HintInternalAction::Select) => {
-                self.start_selection(SelectionType::Simple, *hint_bounds.start(), Side::Left);
-                self.update_selection(*hint_bounds.end(), Side::Right);
-                self.copy_selection(ClipboardType::Selection);
-            },
+            HintAction::Action(HintInternalAction::Select) => {},
             // Move the vi mode cursor.
             HintAction::Action(HintInternalAction::MoveViModeCursor) => {
                 // Enter vi mode if we're not in it already.
@@ -722,46 +631,9 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
         }
     }
 
-    /// Expand the selection to the current mouse cursor position.
-    #[inline]
-    fn expand_selection(&mut self) {
-        let selection_type = match self.mouse().click_state {
-            ClickState::Click => {
-                if self.modifiers().state().control_key() {
-                    SelectionType::Block
-                } else {
-                    SelectionType::Simple
-                }
-            },
-            ClickState::DoubleClick => SelectionType::Semantic,
-            ClickState::TripleClick => SelectionType::Lines,
-            ClickState::None => return,
-        };
-
-        // Load mouse point, treating message bar and padding as the closest cell.
-        let display_offset = self.terminal().grid().display_offset();
-        let point = self.mouse().point(&self.size_info(), display_offset);
-
-        let cell_side = self.mouse().cell_side;
-
-        let selection = match &mut self.terminal_mut().selection {
-            Some(selection) => selection,
-            None => return,
-        };
-
-        selection.ty = selection_type;
-        self.update_selection(point, cell_side);
-
-        // Move vi mode cursor to mouse click position.
-        if self.terminal().mode().contains(TermMode::VI) && !self.search_active() {
-            self.terminal_mut().vi_mode_cursor.point = point;
-        }
-    }
-
     /// Handle beginning of terminal text input.
     fn on_terminal_input_start(&mut self) {
         self.on_typing_start();
-        self.clear_selection();
 
         if self.terminal().grid().display_offset() != 0 {
             self.scroll(Scroll::Bottom);
@@ -821,8 +693,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
             if self.search_state.dfas.take().is_some() {
                 self.display.damage_tracker.frame().mark_fully_damaged();
             }
-        } else {
-            self.clear_selection();
         }
 
         if self.search_active() {

@@ -113,12 +113,6 @@ pub enum Action {
     /// Paste contents of system clipboard.
     Paste,
 
-    /// Store current selection into clipboard.
-    Copy,
-
-    /// Store current selection into selection buffer.
-    CopySelection,
-
     /// Paste contents of selection buffer.
     PasteSelection,
 
@@ -226,9 +220,6 @@ pub enum Action {
 
     /// Toggle simple fullscreen on macOS.
     ToggleSimpleFullscreen,
-
-    /// Clear active selection.
-    ClearSelection,
 
     /// Toggle vi mode.
     ToggleViMode,
@@ -422,8 +413,6 @@ pub fn default_mouse_bindings() -> Vec<MouseBinding> {
 pub fn default_key_bindings() -> Vec<KeyBinding> {
     let mut bindings = bindings!(
         KeyBinding;
-        Copy; Action::Copy;
-        Copy,  +BindingMode::VI; Action::ClearSelection;
         Paste, ~BindingMode::VI; Action::Paste;
         Paste, +BindingMode::VI, +BindingMode::SEARCH; Action::Paste;
         "l",       ModifiersState::CONTROL; Action::ClearLogNotice;
@@ -453,7 +442,6 @@ pub fn default_key_bindings() -> Vec<KeyBinding> {
         // Vi mode.
         Space, ModifiersState::SHIFT | ModifiersState::CONTROL, ~BindingMode::SEARCH; Action::ToggleViMode;
         Space, ModifiersState::SHIFT | ModifiersState::CONTROL, +BindingMode::VI, ~BindingMode::SEARCH; Action::ScrollToBottom;
-        Escape,                             +BindingMode::VI, ~BindingMode::SEARCH; Action::ClearSelection;
         "i",                                +BindingMode::VI, ~BindingMode::SEARCH; Action::ToggleViMode;
         "i",                                +BindingMode::VI, ~BindingMode::SEARCH; Action::ScrollToBottom;
         "c",      ModifiersState::CONTROL,  +BindingMode::VI, ~BindingMode::SEARCH; Action::ToggleViMode;
@@ -465,8 +453,6 @@ pub fn default_key_bindings() -> Vec<KeyBinding> {
         "f",      ModifiersState::CONTROL,  +BindingMode::VI, ~BindingMode::SEARCH; Action::ScrollPageDown;
         "u",      ModifiersState::CONTROL,  +BindingMode::VI, ~BindingMode::SEARCH; Action::ScrollHalfPageUp;
         "d",      ModifiersState::CONTROL,  +BindingMode::VI, ~BindingMode::SEARCH; Action::ScrollHalfPageDown;
-        "y",                                +BindingMode::VI, ~BindingMode::SEARCH; Action::Copy;
-        "y",                                +BindingMode::VI, ~BindingMode::SEARCH; Action::ClearSelection;
         "/",                                +BindingMode::VI, ~BindingMode::SEARCH; Action::SearchForward;
         "?",      ModifiersState::SHIFT,    +BindingMode::VI, ~BindingMode::SEARCH; Action::SearchBackward;
         "v",                                +BindingMode::VI, ~BindingMode::SEARCH; ViAction::ToggleNormalSelection;
@@ -534,8 +520,6 @@ fn common_keybindings() -> Vec<KeyBinding> {
         "f",    ModifiersState::CONTROL | ModifiersState::SHIFT, ~BindingMode::SEARCH;                   Action::SearchForward;
         "b",    ModifiersState::CONTROL | ModifiersState::SHIFT, ~BindingMode::SEARCH;                   Action::SearchBackward;
         Insert, ModifiersState::SHIFT,                           ~BindingMode::VI;                       Action::PasteSelection;
-        "c",    ModifiersState::CONTROL | ModifiersState::SHIFT;                                         Action::Copy;
-        "c",    ModifiersState::CONTROL | ModifiersState::SHIFT, +BindingMode::VI, ~BindingMode::SEARCH; Action::ClearSelection;
         "0",    ModifiersState::CONTROL;                                                                 Action::ResetFontSize;
         "=",    ModifiersState::CONTROL;                                                                 Action::IncreaseFontSize;
         "+",    ModifiersState::CONTROL;                                                                 Action::IncreaseFontSize;
@@ -590,8 +574,6 @@ pub fn platform_key_bindings() -> Vec<KeyBinding> {
         "v",    ModifiersState::SUPER, +BindingMode::VI, +BindingMode::SEARCH; Action::Paste;
         "n",    ModifiersState::SUPER;                                         Action::CreateNewWindow;
         "f",    ModifiersState::CONTROL | ModifiersState::SUPER;               Action::ToggleFullscreen;
-        "c",    ModifiersState::SUPER;                                         Action::Copy;
-        "c",    ModifiersState::SUPER, +BindingMode::VI, ~BindingMode::SEARCH; Action::ClearSelection;
         "h",    ModifiersState::SUPER;                                         Action::Hide;
         "h",    ModifiersState::SUPER   | ModifiersState::ALT;                 Action::HideOtherApplications;
         "m",    ModifiersState::SUPER;                                         Action::Minimize;
