@@ -32,9 +32,7 @@ use winit::event_loop::EventLoopWindowTarget;
 use winit::monitor::MonitorHandle;
 #[cfg(windows)]
 use winit::platform::windows::IconExtWindows;
-use winit::window::{
-    CursorIcon, ImePurpose, UserAttentionType, Window as WinitWindow, WindowBuilder, WindowId,
-};
+use winit::window::{CursorIcon, ImePurpose, Window as WinitWindow, WindowBuilder, WindowId};
 
 use crate::config::window::{Decorations, Identity, WindowConfig};
 use crate::config::UiConfig;
@@ -106,7 +104,6 @@ pub struct Window {
     window: WinitWindow,
 
     is_x11: bool,
-    current_mouse_cursor: CursorIcon,
     mouse_visible: bool,
 }
 
@@ -185,7 +182,6 @@ impl Window {
 
         Ok(Self {
             requested_redraw: false,
-            current_mouse_cursor,
             mouse_visible: true,
             has_frame: true,
             scale_factor,
@@ -219,14 +215,6 @@ impl Window {
         if !self.requested_redraw {
             self.requested_redraw = true;
             self.window.request_redraw();
-        }
-    }
-
-    #[inline]
-    pub fn set_mouse_cursor(&mut self, cursor: CursorIcon) {
-        if cursor != self.current_mouse_cursor {
-            self.current_mouse_cursor = cursor;
-            self.window.set_cursor_icon(cursor);
         }
     }
 
@@ -307,12 +295,6 @@ impl Window {
                 .with_fullsize_content_view(true),
             Decorations::None => window.with_titlebar_hidden(true),
         }
-    }
-
-    pub fn set_urgent(&self, is_urgent: bool) {
-        let attention = if is_urgent { Some(UserAttentionType::Critical) } else { None };
-
-        self.window.request_user_attention(attention);
     }
 
     pub fn id(&self) -> WindowId {

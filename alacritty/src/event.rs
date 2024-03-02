@@ -1,8 +1,7 @@
 //! Process window events.
 
 use std::borrow::Cow;
-use std::cmp::min;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt::Debug;
@@ -18,8 +17,7 @@ use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
 use log::{debug, info, warn};
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{
-    ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, Touch as TouchEvent,
-    WindowEvent,
+    ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, WindowEvent,
 };
 use winit::event_loop::{
     ControlFlow, DeviceEvents, EventLoop, EventLoopProxy, EventLoopWindowTarget,
@@ -31,7 +29,7 @@ use alacritty_terminal::event_loop::Notifier;
 use alacritty_terminal::grid::{BidirectionalIterator, Dimensions, Scroll};
 use alacritty_terminal::index::{Boundary, Column, Direction, Line, Point, Side};
 use alacritty_terminal::term::search::{Match, RegexSearch};
-use alacritty_terminal::term::{self, ClipboardType, Term, TermMode};
+use alacritty_terminal::term::{ClipboardType, Term, TermMode};
 
 use crate::cli::WindowOptions;
 use crate::clipboard::Clipboard;
@@ -903,44 +901,11 @@ impl<'a, N: Notify + 'a, T: EventListener> ActionContext<'a, N, T> {
 #[derive(Debug)]
 pub enum TouchPurpose {
     None,
-    Select(TouchEvent),
-    Scroll(TouchEvent),
-    Zoom(TouchZoom),
-    Tap(TouchEvent),
-    Invalid(HashSet<u64, RandomState>),
 }
 
 impl Default for TouchPurpose {
     fn default() -> Self {
         Self::None
-    }
-}
-
-/// Touch zooming state.
-#[derive(Debug)]
-pub struct TouchZoom {
-    slots: (TouchEvent, TouchEvent),
-    fractions: f32,
-}
-
-impl TouchZoom {
-    pub fn new(slots: (TouchEvent, TouchEvent)) -> Self {
-        Self { slots, fractions: Default::default() }
-    }
-
-    /// Get active touch slots.
-    pub fn slots(&self) -> HashSet<u64, RandomState> {
-        let mut set = HashSet::default();
-        set.insert(self.slots.0.id);
-        set.insert(self.slots.1.id);
-        set
-    }
-
-    /// Calculate distance between slots.
-    fn distance(&self) -> f32 {
-        let delta_x = self.slots.0.location.x - self.slots.1.location.x;
-        let delta_y = self.slots.0.location.y - self.slots.1.location.y;
-        delta_x.hypot(delta_y) as f32
     }
 }
 
@@ -981,23 +946,6 @@ impl Default for Mouse {
             x: Default::default(),
             y: Default::default(),
         }
-    }
-}
-
-impl Mouse {
-    /// Convert mouse pixel coordinates to viewport point.
-    ///
-    /// If the coordinates are outside of the terminal grid, like positions inside the padding, the
-    /// coordinates will be clamped to the closest grid coordinates.
-    #[inline]
-    pub fn point(&self, size: &SizeInfo, display_offset: usize) -> Point {
-        let col = self.x.saturating_sub(size.padding_x() as usize) / (size.cell_width() as usize);
-        let col = min(Column(col), size.last_column());
-
-        let line = self.y.saturating_sub(size.padding_y() as usize) / (size.cell_height() as usize);
-        let line = min(line, size.bottommost_line().0 as usize);
-
-        term::viewport_to_point(display_offset, Point::new(line, col))
     }
 }
 

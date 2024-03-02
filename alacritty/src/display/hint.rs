@@ -48,11 +48,6 @@ impl HintState {
         }
     }
 
-    /// Check if a hint selection is in progress.
-    pub fn active(&self) -> bool {
-        self.hint.is_some()
-    }
-
     /// Cancel the hint highlighting process.
     fn stop(&mut self) {
         self.matches.clear();
