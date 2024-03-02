@@ -72,14 +72,6 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
     #[cfg(target_os = "macos")]
     locale::set_locale_environment();
 
-    // Create a config monitor when config was loaded from path.
-    //
-    // The monitor watches the config file for changes and reloads it. Pending
-    // config changes are processed in the main loop.
-    if config.live_config_reload {
-        monitor::watch(config.config_paths.clone(), window_event_loop.create_proxy());
-    }
-
     // Event processor.
     let window_options = options.window_options.clone();
     let mut processor = Processor::new(config, &window_event_loop);

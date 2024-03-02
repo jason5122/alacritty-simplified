@@ -27,7 +27,6 @@ use crate::config::cursor::Cursor;
 use crate::config::debug::Debug;
 use crate::config::font::Font;
 use crate::config::mouse::{Mouse, MouseBindings};
-use crate::config::scrolling::Scrolling;
 use crate::config::selection::Selection;
 use crate::config::window::WindowConfig;
 use crate::config::LOG_TARGET_CONFIG;
@@ -41,9 +40,6 @@ const URL_REGEX: &str = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https:
 pub struct UiConfig {
     /// Extra environment variables.
     pub env: HashMap<String, String>,
-
-    /// How much scrolling history to keep.
-    pub scrolling: Scrolling,
 
     /// Cursor configuration.
     pub cursor: Cursor,
@@ -67,9 +63,6 @@ pub struct UiConfig {
     #[config(removed = "It's now always set to 'true'. If you're on macOS use \
                         'window.option_as_alt' to alter behavior of Option")]
     pub alt_send_esc: Option<bool>,
-
-    /// Live config reload.
-    pub live_config_reload: bool,
 
     /// RGB values for colors.
     pub colors: Colors,
@@ -116,7 +109,6 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            live_config_reload: true,
             #[cfg(unix)]
             ipc_socket: true,
             draw_bold_text_with_bright_colors: Default::default(),
@@ -125,7 +117,6 @@ impl Default for UiConfig {
             config_paths: Default::default(),
             key_bindings: Default::default(),
             alt_send_esc: Default::default(),
-            scrolling: Default::default(),
             selection: Default::default(),
             keyboard: Default::default(),
             import: Default::default(),
@@ -147,7 +138,7 @@ impl UiConfig {
     pub fn term_options(&self) -> TermConfig {
         TermConfig {
             semantic_escape_chars: self.selection.semantic_escape_chars.clone(),
-            scrolling_history: self.scrolling.history() as usize,
+            scrolling_history: 10_000 as usize,
             vi_mode_cursor_style: self.cursor.vi_mode_style(),
             default_cursor_style: self.cursor.style(),
             kitty_keyboard: true,

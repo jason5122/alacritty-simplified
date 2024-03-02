@@ -10,7 +10,6 @@ pub mod cursor;
 pub mod debug;
 pub mod font;
 pub mod monitor;
-pub mod scrolling;
 pub mod selection;
 pub mod ui_config;
 pub mod window;
