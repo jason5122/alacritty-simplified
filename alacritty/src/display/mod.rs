@@ -36,7 +36,6 @@ use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
 use crate::display::window::Window;
 use crate::event::{Event, EventType, SearchState};
-use crate::message_bar::MessageBuffer;
 use crate::renderer::rects::RenderRect;
 use crate::renderer::{self, GlyphCache, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
@@ -542,7 +541,6 @@ impl Display {
         &mut self,
         terminal: &mut Term<T>,
         pty_resize_handle: &mut dyn OnResize,
-        message_buffer: &MessageBuffer,
         search_state: &mut SearchState,
         config: &UiConfig,
     ) where
@@ -588,12 +586,6 @@ impl Display {
             padding.1,
             config.window.dynamic_padding,
         );
-
-        // Update number of column/lines in the viewport.
-        let search_active = search_state.history_index.is_some();
-        let message_bar_lines = message_buffer.message().map_or(0, |m| m.text(&new_size).len());
-        let search_lines = usize::from(search_active);
-        new_size.reserve_lines(message_bar_lines + search_lines);
 
         // Update resize increments.
         if config.window.resize_increments {

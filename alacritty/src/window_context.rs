@@ -34,13 +34,11 @@ use crate::display::Display;
 use crate::event::{
     ActionContext, Event, EventProxy, InlineSearchState, Mouse, SearchState, TouchPurpose,
 };
-use crate::message_bar::MessageBuffer;
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
 
 /// Event context for one individual Alacritty window.
 pub struct WindowContext {
-    pub message_buffer: MessageBuffer,
     pub display: Display,
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
@@ -189,7 +187,6 @@ impl WindowContext {
             notifier: Notifier(loop_tx),
             cursor_blink_timed_out: Default::default(),
             inline_search_state: Default::default(),
-            message_buffer: Default::default(),
             search_state: Default::default(),
             event_queue: Default::default(),
             modifiers: Default::default(),
@@ -260,7 +257,6 @@ impl WindowContext {
 
         let context = ActionContext {
             cursor_blink_timed_out: &mut self.cursor_blink_timed_out,
-            message_buffer: &mut self.message_buffer,
             inline_search_state: &mut self.inline_search_state,
             search_state: &mut self.search_state,
             modifiers: &mut self.modifiers,
@@ -294,7 +290,6 @@ impl WindowContext {
                 &mut terminal,
                 &mut self.display,
                 &mut self.notifier,
-                &self.message_buffer,
                 &mut self.search_state,
                 old_is_searching,
                 &self.config,
@@ -351,7 +346,6 @@ impl WindowContext {
         terminal: &mut Term<EventProxy>,
         display: &mut Display,
         notifier: &mut Notifier,
-        message_buffer: &MessageBuffer,
         search_state: &mut SearchState,
         old_is_searching: bool,
         config: &UiConfig,
@@ -365,7 +359,7 @@ impl WindowContext {
             search_state.direction == Direction::Left
         };
 
-        display.handle_update(terminal, notifier, message_buffer, search_state, config);
+        display.handle_update(terminal, notifier, search_state, config);
 
         let new_is_searching = search_state.history_index.is_some();
         if !old_is_searching && new_is_searching {

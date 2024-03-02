@@ -32,7 +32,6 @@ mod input;
 mod logging;
 #[cfg(target_os = "macos")]
 mod macos;
-mod message_bar;
 mod renderer;
 mod scheduler;
 mod string;

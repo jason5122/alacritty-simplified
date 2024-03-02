@@ -49,7 +49,6 @@ use crate::display::hint::HintMatch;
 use crate::display::window::Window;
 use crate::display::{Display, Preedit, SizeInfo};
 use crate::input::{self, ActionContext as _, FONT_SIZE_STEP};
-use crate::message_bar::{Message, MessageBuffer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::window_context::WindowContext;
 
@@ -92,7 +91,6 @@ impl From<Event> for WinitEvent<Event> {
 pub enum EventType {
     Terminal(TerminalEvent),
     ConfigReload(PathBuf),
-    Message(Message),
     Scroll(Scroll),
     CreateWindow(WindowOptions),
     #[cfg(unix)]
@@ -198,7 +196,6 @@ pub struct ActionContext<'a, N, T> {
     pub touch: &'a mut TouchPurpose,
     pub modifiers: &'a mut Modifiers,
     pub display: &'a mut Display,
-    pub message_buffer: &'a mut MessageBuffer,
     pub config: &'a UiConfig,
     pub cursor_blink_timed_out: &'a mut bool,
     pub event_loop: &'a EventLoopWindowTarget<Event>,
@@ -461,14 +458,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
         self.display
             .pending_update
             .set_font(self.config.font.clone().with_size(self.display.font_size));
-    }
-
-    #[inline]
-    fn pop_message(&mut self) {
-        if !self.message_buffer.is_empty() {
-            self.display.pending_update.dirty = true;
-            self.message_buffer.pop();
-        }
     }
 
     #[inline]
@@ -893,10 +882,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
         self.inline_search(direction);
     }
 
-    fn message(&self) -> Option<&Message> {
-        self.message_buffer.message()
-    }
-
     fn config(&self) -> &UiConfig {
         self.config
     }
@@ -1284,11 +1269,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                     self.ctx.display.cursor_hidden = false;
                     *self.ctx.dirty = true;
                 },
-                // Add message only if it's not already queued.
-                EventType::Message(message) if !self.ctx.message_buffer.is_queued(&message) => {
-                    self.ctx.message_buffer.push(message);
-                    self.ctx.display.pending_update.dirty = true;
-                },
                 EventType::Terminal(event) => match event {
                     TerminalEvent::Title(title) => {
                         if !self.ctx.preserve_title && self.ctx.config.window.dynamic_title {
@@ -1344,10 +1324,7 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                 },
                 #[cfg(unix)]
                 EventType::IpcConfig(_) => (),
-                EventType::Message(_)
-                | EventType::ConfigReload(_)
-                | EventType::CreateWindow(_)
-                | EventType::Frame => (),
+                EventType::ConfigReload(_) | EventType::CreateWindow(_) | EventType::Frame => (),
             },
             WinitEvent::WindowEvent { event, .. } => {
                 match event {

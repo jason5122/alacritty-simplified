@@ -16,7 +16,6 @@ use log::{self, Level, LevelFilter};
 use winit::event_loop::EventLoopProxy;
 
 use crate::event::{Event, EventType};
-use crate::message_bar::{Message, MessageType};
 
 /// Logging target for IPC config error messages.
 pub const LOG_TARGET_IPC_CONFIG: &str = "alacritty_log_window_config";
@@ -59,40 +58,6 @@ pub struct Logger {
     start: Instant,
 }
 
-impl Logger {
-    /// Log a record to the message bar.
-    fn message_bar_log(&self, record: &log::Record<'_>, logfile_path: &str) {
-        let message_type = match record.level() {
-            Level::Error => MessageType::Error,
-            Level::Warn => MessageType::Warning,
-            _ => return,
-        };
-
-        let event_proxy = match self.event_proxy.lock() {
-            Ok(event_proxy) => event_proxy,
-            Err(_) => return,
-        };
-
-        #[cfg(not(windows))]
-        let env_var = format!("${}", ALACRITTY_LOG_ENV);
-        #[cfg(windows)]
-        let env_var = format!("%{}%", ALACRITTY_LOG_ENV);
-
-        let message = format!(
-            "[{}] See log at {} ({}):\n{}",
-            record.level(),
-            logfile_path,
-            env_var,
-            record.args(),
-        );
-
-        let mut message = Message::new(message, message_type);
-        message.set_target(record.target().to_owned());
-
-        let _ = event_proxy.send_event(Event::new(EventType::Message(message), None));
-    }
-}
-
 impl log::Log for Logger {
     fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         metadata.level() <= log::max_level()
@@ -114,9 +79,6 @@ impl log::Log for Logger {
         if let Ok(mut logfile) = self.logfile.lock() {
             // Write to logfile.
             let _ = logfile.write_all(message.as_ref());
-
-            // Log relevant entries to message bar.
-            self.message_bar_log(record, &logfile.path.to_string_lossy());
         }
 
         // Write to stdout.

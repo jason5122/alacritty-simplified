@@ -43,7 +43,6 @@ use crate::display::{Display, SizeInfo};
 use crate::event::{
     ClickState, Event, EventType, InlineSearchState, Mouse, TouchPurpose, TouchZoom,
 };
-use crate::message_bar::{self, Message};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 
 pub mod keyboard;
@@ -102,7 +101,6 @@ pub trait ActionContext<T: EventListener> {
     fn change_font_size(&mut self, _delta: f32) {}
     fn reset_font_size(&mut self) {}
     fn pop_message(&mut self) {}
-    fn message(&self) -> Option<&Message>;
     fn config(&self) -> &UiConfig;
     #[cfg(target_os = "macos")]
     fn event_loop(&self) -> &EventLoopWindowTarget<Event>;
@@ -949,42 +947,13 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
             _ => (),
         }
 
-        // Skip normal mouse events if the message bar has been clicked.
-        if self.message_bar_cursor_state() == Some(CursorIcon::Pointer)
-            && state == ElementState::Pressed
-        {
-            let size = self.ctx.size_info();
-
-            let current_lines = self.ctx.message().map_or(0, |m| m.text(&size).len());
-
-            self.ctx.clear_selection();
-            self.ctx.pop_message();
-
-            // Reset cursor when message bar height changed or all messages are gone.
-            let new_lines = self.ctx.message().map_or(0, |m| m.text(&size).len());
-
-            let new_icon = match current_lines.cmp(&new_lines) {
-                Ordering::Less => CursorIcon::Default,
-                Ordering::Equal => CursorIcon::Pointer,
-                Ordering::Greater => {
-                    if self.ctx.mouse_mode() {
-                        CursorIcon::Default
-                    } else {
-                        CursorIcon::Text
-                    }
-                },
-            };
-
-            self.ctx.window().set_mouse_cursor(new_icon);
-        } else {
-            match state {
-                ElementState::Pressed => {
-                    // Process mouse press before bindings to update the `click_state`.
-                    self.on_mouse_press(button);
-                    self.process_mouse_bindings(button);
-                },
-                ElementState::Released => self.on_mouse_release(button),
-            }
+        match state {
+            ElementState::Pressed => {
+                // Process mouse press before bindings to update the `click_state`.
+                self.on_mouse_press(button);
+                self.process_mouse_bindings(button);
+            },
+            ElementState::Released => self.on_mouse_release(button),
         }
     }
 
@@ -1019,31 +988,6 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
         }
     }
 
-    /// Check mouse icon state in relation to the message bar.
-    fn message_bar_cursor_state(&self) -> Option<CursorIcon> {
-        // Since search is above the message bar, the button is offset by search's height.
-        let search_height = usize::from(self.ctx.search_active());
-
-        // Calculate Y position of the end of the last terminal line.
-        let size = self.ctx.size_info();
-        let terminal_end = size.padding_y() as usize
-            + size.cell_height() as usize * (size.screen_lines() + search_height);
-
-        let mouse = self.ctx.mouse();
-        let display_offset = self.ctx.terminal().grid().display_offset();
-        let point = self.ctx.mouse().point(&self.ctx.size_info(), display_offset);
-
-        if self.ctx.message().is_none() || (mouse.y <= terminal_end) {
-            None
-        } else if mouse.y <= terminal_end + size.cell_height() as usize
-            && point.column + message_bar::CLOSE_BUTTON_TEXT.len() >= size.columns()
-        {
-            Some(CursorIcon::Pointer)
-        } else {
-            Some(CursorIcon::Default)
-        }
-    }
-
     /// Icon state of the cursor.
     fn cursor_state(&mut self) -> CursorIcon {
         let display_offset = self.ctx.terminal().grid().display_offset();
@@ -1053,9 +997,7 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
         // Function to check if mouse is on top of a hint.
         let hint_highlighted = |hint: &HintMatch| hint.should_highlight(point, hyperlink.as_ref());
 
-        if let Some(mouse_state) = self.message_bar_cursor_state() {
-            mouse_state
-        } else if self.ctx.display().highlighted_hint.as_ref().map_or(false, hint_highlighted) {
+        if self.ctx.display().highlighted_hint.as_ref().map_or(false, hint_highlighted) {
             CursorIcon::Pointer
         } else if !self.ctx.modifiers().state().shift_key() && self.ctx.mouse_mode() {
             CursorIcon::Default
