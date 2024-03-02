@@ -499,12 +499,8 @@ impl Display {
     // performed in [`Self::process_renderer_update`] right before drawing.
     //
     /// Process update events.
-    pub fn handle_update<T>(
-        &mut self,
-        terminal: &mut Term<T>,
-        pty_resize_handle: &mut dyn OnResize,
-        config: &UiConfig,
-    ) where
+    pub fn handle_update<T>(&mut self, terminal: &mut Term<T>, config: &UiConfig)
+    where
         T: EventListener,
     {
         let pending_update = mem::take(&mut self.pending_update);
@@ -547,17 +543,6 @@ impl Display {
         // Update resize increments.
         if config.window.resize_increments {
             self.window.set_resize_increments(PhysicalSize::new(cell_width, cell_height));
-        }
-
-        // Resize when terminal when its dimensions have changed.
-        if self.size_info.screen_lines() != new_size.screen_lines
-            || self.size_info.columns() != new_size.columns()
-        {
-            // Resize PTY.
-            pty_resize_handle.on_resize(new_size.into());
-
-            // Resize terminal.
-            terminal.resize(new_size);
         }
 
         // Check if dimensions have changed.

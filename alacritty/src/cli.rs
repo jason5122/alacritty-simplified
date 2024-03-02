@@ -73,57 +73,6 @@ fn parse_class(input: &str) -> Result<Class, String> {
     Ok(Class::new(general, instance))
 }
 
-/// Terminal specific cli options which can be passed to new windows via IPC.
-#[derive(Serialize, Deserialize, Args, Default, Debug, Clone, PartialEq, Eq)]
-pub struct TerminalOptions {
-    /// Start the shell in the specified working directory.
-    #[clap(long, value_hint = ValueHint::FilePath)]
-    pub working_directory: Option<PathBuf>,
-
-    /// Remain open after child process exit.
-    #[clap(long)]
-    pub hold: bool,
-
-    /// Command and args to execute (must be last argument).
-    #[clap(short = 'e', long, allow_hyphen_values = true, num_args = 1..)]
-    command: Vec<String>,
-}
-
-impl TerminalOptions {
-    /// Shell override passed through the CLI.
-    pub fn command(&self) -> Option<Program> {
-        let (program, args) = self.command.split_first()?;
-        Some(Program::WithArgs { program: program.clone(), args: args.to_vec() })
-    }
-
-    /// Override the [`PtyOptions`]'s fields with the [`TerminalOptions`].
-    pub fn override_pty_config(&self, pty_config: &mut PtyOptions) {
-        if let Some(working_directory) = &self.working_directory {
-            if working_directory.is_dir() {
-                pty_config.working_directory = Some(working_directory.to_owned());
-            } else {
-                error!("Invalid working directory: {:?}", working_directory);
-            }
-        }
-
-        if let Some(command) = self.command() {
-            pty_config.shell = Some(command.into());
-        }
-
-        pty_config.hold |= self.hold;
-    }
-}
-
-impl From<TerminalOptions> for PtyOptions {
-    fn from(mut options: TerminalOptions) -> Self {
-        PtyOptions {
-            working_directory: options.working_directory.take(),
-            shell: options.command().map(Into::into),
-            hold: options.hold,
-        }
-    }
-}
-
 /// Window specific cli options which can be passed to new windows via IPC.
 #[derive(Serialize, Deserialize, Args, Default, Debug, Clone, PartialEq, Eq)]
 pub struct WindowIdentity {
@@ -151,10 +100,6 @@ impl WindowIdentity {
 /// Subset of options that we pass to 'create-window' IPC subcommand.
 #[derive(Serialize, Deserialize, Args, Default, Clone, Debug, PartialEq, Eq)]
 pub struct WindowOptions {
-    /// Terminal options which can be passed via IPC.
-    #[clap(flatten)]
-    pub terminal_options: TerminalOptions,
-
     #[clap(flatten)]
     /// Window options which could be passed via IPC.
     pub window_identity: WindowIdentity,

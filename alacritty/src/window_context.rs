@@ -15,7 +15,7 @@ use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
 use alacritty_terminal::event::Event as TerminalEvent;
-use alacritty_terminal::event_loop::{EventLoop as PtyEventLoop, Msg, Notifier};
+use alacritty_terminal::event_loop::{EventLoop as PtyEventLoop, Msg};
 use alacritty_terminal::grid::Dimensions;
 use alacritty_terminal::sync::FairMutex;
 use alacritty_terminal::term::Term;
@@ -35,7 +35,6 @@ pub struct WindowContext {
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
     terminal: Arc<FairMutex<Term<EventProxy>>>,
-    notifier: Notifier,
     occluded: bool,
     #[cfg(not(windows))]
     master_fd: RawFd,
@@ -100,15 +99,6 @@ impl WindowContext {
         options: WindowOptions,
         proxy: EventLoopProxy<Event>,
     ) -> Result<Self, Box<dyn Error>> {
-        let mut pty_config = config.pty_config();
-        options.terminal_options.override_pty_config(&mut pty_config);
-
-        info!(
-            "PTY dimensions: {:?} x {:?}",
-            display.size_info.screen_lines(),
-            display.size_info.columns()
-        );
-
         let event_proxy = EventProxy::new(proxy, display.window.id());
 
         // Create the terminal.
@@ -124,6 +114,7 @@ impl WindowContext {
         // The PTY forks a process to run the shell on the slave side of the
         // pseudoterminal. A file descriptor for the master side is retained for
         // reading/writing to the shell.
+        let mut pty_config = config.pty_config();
         let pty = tty::new(&pty_config, display.size_info.into(), display.window.id().into())?;
 
         #[cfg(not(windows))]
@@ -152,11 +143,6 @@ impl WindowContext {
         // Kick off the I/O thread.
         let _io_thread = event_loop.spawn();
 
-        // Start cursor blinking, in case `Focused` isn't sent on startup.
-        if config.cursor.style().blinking {
-            event_proxy.send_event(TerminalEvent::CursorBlinkingChange.into());
-        }
-
         // Create context for the Alacritty window.
         Ok(WindowContext {
             terminal,
@@ -166,7 +152,6 @@ impl WindowContext {
             #[cfg(not(windows))]
             shell_pid,
             config,
-            notifier: Notifier(loop_tx),
             event_queue: Default::default(),
             occluded: Default::default(),
             dirty: Default::default(),
@@ -216,7 +201,6 @@ impl WindowContext {
         let mut terminal = self.terminal.lock();
 
         let context = ActionContext {
-            notifier: &mut self.notifier,
             display: &mut self.display,
             dirty: &mut self.dirty,
             occluded: &mut self.occluded,
@@ -238,12 +222,7 @@ impl WindowContext {
 
         // Process DisplayUpdate events.
         if self.display.pending_update.dirty {
-            Self::submit_display_update(
-                &mut terminal,
-                &mut self.display,
-                &mut self.notifier,
-                &self.config,
-            );
+            Self::submit_display_update(&mut terminal, &mut self.display, &self.config);
             self.dirty = true;
         }
 
@@ -267,16 +246,8 @@ impl WindowContext {
     fn submit_display_update(
         terminal: &mut Term<EventProxy>,
         display: &mut Display,
-        notifier: &mut Notifier,
         config: &UiConfig,
     ) {
-        display.handle_update(terminal, notifier, config);
-    }
-}
-
-impl Drop for WindowContext {
-    fn drop(&mut self) {
-        // Shutdown the terminal's PTY.
-        let _ = self.notifier.0.send(Msg::Shutdown);
+        display.handle_update(terminal, config);
     }
 }

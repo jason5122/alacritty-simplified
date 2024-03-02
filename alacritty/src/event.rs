@@ -68,8 +68,7 @@ impl From<TerminalEvent> for EventType {
     }
 }
 
-pub struct ActionContext<'a, N, T> {
-    pub notifier: &'a mut N,
+pub struct ActionContext<'a, T> {
     pub terminal: &'a mut Term<T>,
     pub display: &'a mut Display,
     pub config: &'a UiConfig,
@@ -84,14 +83,14 @@ pub struct ActionContext<'a, N, T> {
     pub shell_pid: u32,
 }
 
-impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionContext<'a, N, T> {
+impl<'a, T: EventListener> input::ActionContext<T> for ActionContext<'a, T> {
     #[inline]
     fn window(&mut self) -> &mut Window {
         &mut self.display.window
     }
 }
 
-impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
+impl input::Processor<EventProxy, ActionContext<'_, EventProxy>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
         match event {
