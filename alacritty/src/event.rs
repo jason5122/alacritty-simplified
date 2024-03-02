@@ -1,19 +1,17 @@
 //! Process window events.
 
-use std::borrow::Cow;
 use std::collections::{HashMap, VecDeque};
 use std::error::Error;
-use std::ffi::OsStr;
 use std::fmt::Debug;
 #[cfg(not(windows))]
 use std::os::unix::io::RawFd;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
-use std::{env, f32, mem};
+use std::{f32, mem};
 
 use ahash::RandomState;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
-use log::{debug, info, warn};
+use log::info;
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{
     ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, WindowEvent,
@@ -196,236 +194,8 @@ pub struct ActionContext<'a, N, T> {
 
 impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionContext<'a, N, T> {
     #[inline]
-    fn write_to_pty<B: Into<Cow<'static, [u8]>>>(&self, val: B) {
-        self.notifier.notify(val);
-    }
-
-    /// Request a redraw.
-    #[inline]
-    fn mark_dirty(&mut self) {
-        *self.dirty = true;
-    }
-
-    #[inline]
-    fn size_info(&self) -> SizeInfo {
-        self.display.size_info
-    }
-
-    #[inline]
-    fn mouse_mode(&self) -> bool {
-        self.terminal.mode().intersects(TermMode::MOUSE_MODE)
-            && !self.terminal.mode().contains(TermMode::VI)
-    }
-
-    #[inline]
-    fn mouse_mut(&mut self) -> &mut Mouse {
-        self.mouse
-    }
-
-    #[inline]
-    fn mouse(&self) -> &Mouse {
-        self.mouse
-    }
-
-    #[inline]
-    fn touch_purpose(&mut self) -> &mut TouchPurpose {
-        self.touch
-    }
-
-    #[inline]
-    fn modifiers(&mut self) -> &mut Modifiers {
-        self.modifiers
-    }
-
-    #[inline]
     fn window(&mut self) -> &mut Window {
         &mut self.display.window
-    }
-
-    #[inline]
-    fn display(&mut self) -> &mut Display {
-        self.display
-    }
-
-    #[inline]
-    fn terminal(&self) -> &Term<T> {
-        self.terminal
-    }
-
-    #[inline]
-    fn terminal_mut(&mut self) -> &mut Term<T> {
-        self.terminal
-    }
-
-    fn config(&self) -> &UiConfig {
-        self.config
-    }
-
-    #[cfg(target_os = "macos")]
-    fn event_loop(&self) -> &EventLoopWindowTarget<Event> {
-        self.event_loop
-    }
-
-    fn clipboard_mut(&mut self) -> &mut Clipboard {
-        self.clipboard
-    }
-
-    fn scheduler_mut(&mut self) -> &mut Scheduler {
-        self.scheduler
-    }
-}
-
-impl<'a, N: Notify + 'a, T: EventListener> ActionContext<'a, N, T> {
-    fn update_search(&mut self) {
-        let regex = match self.search_state.regex() {
-            Some(regex) => regex,
-            None => return,
-        };
-
-        // Hide cursor while typing into the search bar.
-        if self.config.mouse.hide_when_typing {
-            self.display.window.set_mouse_visible(false);
-        }
-
-        if regex.is_empty() {
-            // Stop search if there's nothing to search for.
-            self.search_reset_state();
-            self.search_state.dfas = None;
-        } else {
-            // Create search dfas for the new regex string.
-            self.search_state.dfas = RegexSearch::new(regex).ok();
-
-            // Update search highlighting.
-            self.goto_match(MAX_SEARCH_WHILE_TYPING);
-        }
-
-        *self.dirty = true;
-    }
-
-    /// Reset terminal to the state before search was started.
-    fn search_reset_state(&mut self) {
-        // Unschedule pending timers.
-        let timer_id = TimerId::new(Topic::DelayedSearch, self.display.window.id());
-        self.scheduler.unschedule(timer_id);
-
-        // Clear focused match.
-        self.search_state.focused_match = None;
-
-        // The viewport reset logic is only needed for vi mode, since without it our origin is
-        // always at the current display offset instead of at the vi cursor position which we need
-        // to recover to.
-        if !self.terminal.mode().contains(TermMode::VI) {
-            return;
-        }
-
-        // Reset display offset and cursor position.
-        self.terminal.vi_mode_cursor.point = self.search_state.origin;
-        self.terminal.scroll_display(Scroll::Delta(self.search_state.display_offset_delta));
-        self.search_state.display_offset_delta = 0;
-
-        *self.dirty = true;
-    }
-
-    /// Jump to the first regex match from the search origin.
-    fn goto_match(&mut self, mut limit: Option<usize>) {
-        let dfas = match &mut self.search_state.dfas {
-            Some(dfas) => dfas,
-            None => return,
-        };
-
-        // Limit search only when enough lines are available to run into the limit.
-        limit = limit.filter(|&limit| limit <= self.terminal.total_lines());
-
-        // Jump to the next match.
-        let direction = self.search_state.direction;
-        let clamped_origin = self.search_state.origin.grid_clamp(self.terminal, Boundary::Grid);
-        match self.terminal.search_next(dfas, clamped_origin, direction, Side::Left, limit) {
-            Some(regex_match) => {
-                let old_offset = self.terminal.grid().display_offset() as i32;
-
-                if self.terminal.mode().contains(TermMode::VI) {
-                    // Move vi cursor to the start of the match.
-                    self.terminal.vi_goto_point(*regex_match.start());
-                } else {
-                    // Select the match when vi mode is not active.
-                    self.terminal.scroll_to_point(*regex_match.start());
-                }
-
-                // Update the focused match.
-                self.search_state.focused_match = Some(regex_match);
-
-                // Store number of lines the viewport had to be moved.
-                let display_offset = self.terminal.grid().display_offset();
-                self.search_state.display_offset_delta += old_offset - display_offset as i32;
-
-                // Since we found a result, we require no delayed re-search.
-                let timer_id = TimerId::new(Topic::DelayedSearch, self.display.window.id());
-                self.scheduler.unschedule(timer_id);
-            },
-            // Reset viewport only when we know there is no match, to prevent unnecessary jumping.
-            None if limit.is_none() => self.search_reset_state(),
-            None => {
-                // Schedule delayed search if we ran into our search limit.
-                let timer_id = TimerId::new(Topic::DelayedSearch, self.display.window.id());
-                if !self.scheduler.scheduled(timer_id) {
-                    let event = Event::new(EventType::SearchNext, self.display.window.id());
-                    self.scheduler.schedule(event, TYPING_SEARCH_DELAY, false, timer_id);
-                }
-
-                // Clear focused match.
-                self.search_state.focused_match = None;
-            },
-        }
-
-        *self.dirty = true;
-    }
-
-    /// Cleanup the search state.
-    fn exit_search(&mut self) {
-        let vi_mode = self.terminal.mode().contains(TermMode::VI);
-        self.window().set_ime_allowed(!vi_mode);
-
-        self.display.damage_tracker.frame().mark_fully_damaged();
-        self.display.pending_update.dirty = true;
-        self.search_state.history_index = None;
-
-        // Clear focused match.
-        self.search_state.focused_match = None;
-    }
-
-    /// Perform vi mode inline search in the specified direction.
-    fn inline_search(&mut self, direction: Direction) {
-        let c = match self.inline_search_state.character {
-            Some(c) => c,
-            None => return,
-        };
-        let mut buf = [0; 4];
-        let search_character = c.encode_utf8(&mut buf);
-
-        // Find next match in this line.
-        let vi_point = self.terminal.vi_mode_cursor.point;
-        let point = match direction {
-            Direction::Right => self.terminal.inline_search_right(vi_point, search_character),
-            Direction::Left => self.terminal.inline_search_left(vi_point, search_character),
-        };
-
-        // Jump to point if there's a match.
-        if let Ok(mut point) = point {
-            if self.inline_search_state.stop_short {
-                let grid = self.terminal.grid();
-                point = match direction {
-                    Direction::Right => {
-                        grid.iter_from(point).prev().map_or(point, |cell| cell.point)
-                    },
-                    Direction::Left => {
-                        grid.iter_from(point).next().map_or(point, |cell| cell.point)
-                    },
-                };
-            }
-
-            self.terminal.vi_goto_point(point);
-            self.mark_dirty();
-        }
     }
 }
 

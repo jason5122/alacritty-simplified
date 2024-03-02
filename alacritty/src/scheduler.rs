@@ -86,17 +86,6 @@ impl Scheduler {
         self.timers.insert(index, Timer { interval, deadline, event, id: timer_id });
     }
 
-    /// Cancel a scheduled event.
-    pub fn unschedule(&mut self, id: TimerId) -> Option<Timer> {
-        let index = self.timers.iter().position(|timer| timer.id == id)?;
-        self.timers.remove(index)
-    }
-
-    /// Check if a timer is already scheduled.
-    pub fn scheduled(&mut self, id: TimerId) -> bool {
-        self.timers.iter().any(|timer| timer.id == id)
-    }
-
     /// Remove all timers scheduled for a window.
     ///
     /// This must be called when a window is removed to ensure that timers on intervals do not

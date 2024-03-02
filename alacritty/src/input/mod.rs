@@ -38,23 +38,7 @@ pub struct Processor<T: EventListener, A: ActionContext<T>> {
 }
 
 pub trait ActionContext<T: EventListener> {
-    fn write_to_pty<B: Into<Cow<'static, [u8]>>>(&self, _data: B) {}
-    fn mark_dirty(&mut self) {}
-    fn size_info(&self) -> SizeInfo;
-    fn mouse_mut(&mut self) -> &mut Mouse;
-    fn mouse(&self) -> &Mouse;
-    fn touch_purpose(&mut self) -> &mut TouchPurpose;
-    fn modifiers(&mut self) -> &mut Modifiers;
     fn window(&mut self) -> &mut Window;
-    fn display(&mut self) -> &mut Display;
-    fn terminal(&self) -> &Term<T>;
-    fn terminal_mut(&mut self) -> &mut Term<T>;
-    fn config(&self) -> &UiConfig;
-    #[cfg(target_os = "macos")]
-    fn event_loop(&self) -> &EventLoopWindowTarget<Event>;
-    fn mouse_mode(&self) -> bool;
-    fn clipboard_mut(&mut self) -> &mut Clipboard;
-    fn scheduler_mut(&mut self) -> &mut Scheduler;
 }
 
 trait Execute<T: EventListener> {
