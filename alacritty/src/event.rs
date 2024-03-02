@@ -1160,8 +1160,12 @@ impl Processor {
     /// Create a new event processor.
     ///
     /// Takes a writer which is expected to be hooked up to the write end of a PTY.
-    pub fn new(config: UiConfig, _event_loop: &EventLoop<Event>) -> Processor {
-        Processor { gl_display: None, config: Rc::new(config), windows: Default::default() }
+    pub fn new(_event_loop: &EventLoop<Event>) -> Processor {
+        Processor {
+            gl_display: None,
+            config: Rc::new(UiConfig::default()),
+            windows: Default::default(),
+        }
     }
 
     /// Create initial window and load GL platform.
@@ -1172,10 +1176,13 @@ impl Processor {
         &mut self,
         event_loop: &EventLoopWindowTarget<Event>,
         proxy: EventLoopProxy<Event>,
-        options: WindowOptions,
     ) -> Result<(), Box<dyn Error>> {
-        let window_context =
-            WindowContext::initial(event_loop, proxy, self.config.clone(), options)?;
+        let window_context = WindowContext::initial(
+            event_loop,
+            proxy,
+            Rc::new(UiConfig::default()),
+            WindowOptions::default(),
+        )?;
 
         self.gl_display = Some(window_context.display.gl_context().display());
         self.windows.insert(window_context.id(), window_context);
@@ -1186,14 +1193,9 @@ impl Processor {
     /// Run the event loop.
     ///
     /// The result is exit code generate from the loop.
-    pub fn run(
-        &mut self,
-        event_loop: EventLoop<Event>,
-        initial_window_options: WindowOptions,
-    ) -> Result<(), Box<dyn Error>> {
+    pub fn run(&mut self, event_loop: EventLoop<Event>) -> Result<(), Box<dyn Error>> {
         let proxy = event_loop.create_proxy();
         let mut scheduler = Scheduler::new(proxy.clone());
-        let mut initial_window_options = Some(initial_window_options);
 
         // Disable all device events, since we don't care about them.
         event_loop.listen_device_events(DeviceEvents::Never);
@@ -1212,19 +1214,7 @@ impl Processor {
             match event {
                 // The event loop just got initialized. Create a window.
                 WinitEvent::Resumed => {
-                    // Creating window inside event loop is required for platforms like macOS to
-                    // properly initialize state, like tab management. Otherwise the first
-                    // window won't handle tabs.
-                    let initial_window_options = match initial_window_options.take() {
-                        Some(initial_window_options) => initial_window_options,
-                        None => return,
-                    };
-
-                    if let Err(err) = self.create_initial_window(
-                        event_loop,
-                        proxy.clone(),
-                        initial_window_options,
-                    ) {
+                    if let Err(err) = self.create_initial_window(event_loop, proxy.clone()) {
                         *initial_window_error_loop = Err(err);
                         event_loop.exit();
                         return;
