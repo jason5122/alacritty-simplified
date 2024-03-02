@@ -1,5 +1,4 @@
 use std::ffi::IntoStringError;
-use std::fmt::{self, Display, Formatter};
 use std::io;
 
 /// Error during working directory retrieval.
@@ -9,31 +8,6 @@ pub enum Error {
 
     /// Error converting into utf8 string.
     IntoString(IntoStringError),
-
-    /// Expected return size didn't match libproc's.
-    InvalidSize,
-}
-
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Error::InvalidSize => None,
-            Error::Io(err) => err.source(),
-            Error::IntoString(err) => err.source(),
-        }
-    }
-}
-
-impl Display for Error {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Error::InvalidSize => write!(f, "Invalid proc_pidinfo return size"),
-            Error::Io(err) => write!(f, "Error getting current working directory: {}", err),
-            Error::IntoString(err) => {
-                write!(f, "Error when parsing current working directory: {}", err)
-            },
-        }
-    }
 }
 
 impl From<io::Error> for Error {

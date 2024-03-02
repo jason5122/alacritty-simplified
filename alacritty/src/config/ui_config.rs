@@ -9,14 +9,12 @@ use alacritty_config::SerdeReplace;
 use alacritty_terminal::term::Config as TermConfig;
 use alacritty_terminal::term::Osc52;
 use alacritty_terminal::tty::{Options as PtyOptions, Shell};
-use log::error;
 use serde::de::{Error as SerdeError, MapAccess, Visitor};
 use serde::{self, Deserialize, Deserializer};
 use unicode_width::UnicodeWidthChar;
 use winit::keyboard::{Key, ModifiersState};
 
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
-use alacritty_terminal::term::search::RegexSearch;
 
 use crate::config::bindings::{
     self, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper,
@@ -430,16 +428,6 @@ pub struct HintMouse {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LazyRegex(Rc<RefCell<LazyRegexVariant>>);
 
-impl LazyRegex {
-    /// Execute a function with the compiled regex DFAs as parameter.
-    pub fn with_compiled<T, F>(&self, f: F) -> Option<T>
-    where
-        F: FnMut(&mut RegexSearch) -> T,
-    {
-        self.0.borrow_mut().compiled().map(f)
-    }
-}
-
 impl<'de> Deserialize<'de> for LazyRegex {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -453,48 +441,13 @@ impl<'de> Deserialize<'de> for LazyRegex {
 /// Regex which is compiled on demand, to avoid expensive computations at startup.
 #[derive(Clone, Debug)]
 pub enum LazyRegexVariant {
-    Compiled(Box<RegexSearch>),
     Pattern(String),
-    Uncompilable,
-}
-
-impl LazyRegexVariant {
-    /// Get a reference to the compiled regex.
-    ///
-    /// If the regex is not already compiled, this will compile the DFAs and store them for future
-    /// access.
-    fn compiled(&mut self) -> Option<&mut RegexSearch> {
-        // Check if the regex has already been compiled.
-        let regex = match self {
-            Self::Compiled(regex_search) => return Some(regex_search),
-            Self::Uncompilable => return None,
-            Self::Pattern(regex) => regex,
-        };
-
-        // Compile the regex.
-        let regex_search = match RegexSearch::new(regex) {
-            Ok(regex_search) => regex_search,
-            Err(err) => {
-                error!("could not compile hint regex: {err}");
-                *self = Self::Uncompilable;
-                return None;
-            },
-        };
-        *self = Self::Compiled(Box::new(regex_search));
-
-        // Return a reference to the compiled DFAs.
-        match self {
-            Self::Compiled(dfas) => Some(dfas),
-            _ => unreachable!(),
-        }
-    }
 }
 
 impl PartialEq for LazyRegexVariant {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Pattern(regex), Self::Pattern(other_regex)) => regex == other_regex,
-            _ => false,
         }
     }
 }

@@ -102,9 +102,6 @@ pub struct Window {
     pub requested_redraw: bool,
 
     window: WinitWindow,
-
-    is_x11: bool,
-    mouse_visible: bool,
 }
 
 impl Window {
@@ -178,16 +175,8 @@ impl Window {
 
         let scale_factor = window.scale_factor();
         println!("Window scale factor: {}", scale_factor);
-        let is_x11 = matches!(window.raw_window_handle(), RawWindowHandle::Xlib(_));
 
-        Ok(Self {
-            requested_redraw: false,
-            mouse_visible: true,
-            has_frame: true,
-            scale_factor,
-            window,
-            is_x11,
-        })
+        Ok(Self { requested_redraw: false, has_frame: true, scale_factor, window })
     }
 
     #[inline]

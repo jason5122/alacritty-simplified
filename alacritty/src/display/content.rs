@@ -3,13 +3,11 @@ use std::mem;
 use alacritty_terminal::grid::Indexed;
 use alacritty_terminal::index::Point;
 use alacritty_terminal::term::cell::{Cell, Flags, Hyperlink};
-use alacritty_terminal::term::search::Match;
 use alacritty_terminal::term::{self, RenderableContent as TerminalContent, TermMode};
 use alacritty_terminal::vte::ansi::{Color, CursorShape, NamedColor};
 
 use crate::config::UiConfig;
 use crate::display::color::{CellRgb, List, Rgb, DIM_FACTOR};
-use crate::display::SizeInfo;
 
 /// Minimum contrast between a fixed cursor color and the cell's background.
 pub const MIN_CURSOR_CONTRAST: f64 = 1.5;
@@ -24,8 +22,6 @@ pub struct RenderableContent<'a> {
     cursor_point: Point<usize>,
     config: &'a UiConfig,
     colors: &'a List,
-    focused_match: Option<&'a Match>,
-    size: &'a SizeInfo,
 }
 
 impl<'a> RenderableContent<'a> {

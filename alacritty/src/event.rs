@@ -167,7 +167,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
 pub struct Processor {
     windows: HashMap<WindowId, WindowContext, RandomState>,
     gl_display: Option<GlutinDisplay>,
-    config: Rc<UiConfig>,
 }
 
 impl Processor {
@@ -175,11 +174,7 @@ impl Processor {
     ///
     /// Takes a writer which is expected to be hooked up to the write end of a PTY.
     pub fn new(_event_loop: &EventLoop<Event>) -> Processor {
-        Processor {
-            gl_display: None,
-            config: Rc::new(UiConfig::default()),
-            windows: Default::default(),
-        }
+        Processor { gl_display: None, windows: Default::default() }
     }
 
     /// Create initial window and load GL platform.
