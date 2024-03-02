@@ -13,7 +13,6 @@ use glutin::prelude::*;
 use glutin::surface::{Surface, SwapInterval, WindowSurface};
 
 use log::{debug, info};
-use parking_lot::MutexGuard;
 use raw_window_handle::RawWindowHandle;
 use serde::{Deserialize, Serialize};
 use winit::dpi::PhysicalSize;
@@ -572,7 +571,7 @@ impl Display {
 
         let padding = config.window.padding(self.window.scale_factor as f32);
 
-        let mut new_size = SizeInfo::new(
+        let new_size = SizeInfo::new(
             width,
             height,
             cell_width,
@@ -649,17 +648,9 @@ impl Display {
     /// A reference to Term whose state is being drawn must be provided.
     ///
     /// This call may block if vsync is enabled.
-    pub fn draw<T: EventListener>(
-        &mut self,
-        terminal: MutexGuard<'_, Term<T>>,
-        scheduler: &mut Scheduler,
-        config: &UiConfig,
-    ) {
+    pub fn draw(&mut self, scheduler: &mut Scheduler, config: &UiConfig) {
         let metrics = self.glyph_cache.font_metrics();
         let size_info = self.size_info;
-
-        // Drop terminal as early as possible to free lock.
-        drop(terminal);
 
         // Make sure this window's OpenGL context is active.
         self.make_current();

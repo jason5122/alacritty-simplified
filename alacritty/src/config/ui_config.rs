@@ -74,10 +74,6 @@ pub struct UiConfig {
     /// Regex hints for interacting with terminal content.
     pub hints: Hints,
 
-    /// Offer IPC through a unix socket.
-    #[cfg(unix)]
-    pub ipc_socket: bool,
-
     /// Path to a shell program to run on startup.
     pub shell: Option<Program>,
 
@@ -109,8 +105,6 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            #[cfg(unix)]
-            ipc_socket: true,
             draw_bold_text_with_bright_colors: Default::default(),
             working_directory: Default::default(),
             mouse_bindings: Default::default(),

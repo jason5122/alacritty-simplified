@@ -43,7 +43,7 @@ mod gl {
 }
 
 use crate::cli::Options;
-use crate::config::{monitor, UiConfig};
+use crate::config::UiConfig;
 use crate::event::{Event, Processor};
 #[cfg(target_os = "macos")]
 use crate::macos::locale;

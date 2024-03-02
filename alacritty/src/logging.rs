@@ -13,15 +13,9 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Instant;
 
 use log::{self, Level, LevelFilter};
-use winit::event_loop::EventLoopProxy;
-
-use crate::event::{Event, EventType};
 
 /// Logging target for IPC config error messages.
 pub const LOG_TARGET_IPC_CONFIG: &str = "alacritty_log_window_config";
-
-/// Name for the environment variable containing the log file's path.
-const ALACRITTY_LOG_ENV: &str = "ALACRITTY_LOG";
 
 /// Logging target for config error messages.
 pub const LOG_TARGET_CONFIG: &str = "alacritty_config_derive";
@@ -54,7 +48,6 @@ const ALLOWED_TARGETS: &[&str] = &[
 pub struct Logger {
     logfile: Mutex<OnDemandLogFile>,
     stdout: Mutex<LineWriter<Stdout>>,
-    event_proxy: Mutex<EventLoopProxy<Event>>,
     start: Instant,
 }
 

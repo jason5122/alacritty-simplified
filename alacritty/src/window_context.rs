@@ -210,9 +210,7 @@ impl WindowContext {
         // Force the display to process any pending display update.
         self.display.process_renderer_update();
 
-        // Redraw the window.
-        let terminal = self.terminal.lock();
-        self.display.draw(terminal, scheduler, &self.config);
+        self.display.draw(scheduler, &self.config);
     }
 
     /// Process events for this terminal window.
