@@ -1,6 +1,5 @@
 use std::fmt::{self, Formatter};
 
-use log::{error, warn};
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -11,7 +10,6 @@ use winit::window::{Fullscreen, Theme as WinitTheme};
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 
 use crate::config::ui_config::{Delta, Percentage};
-use crate::config::LOG_TARGET_CONFIG;
 
 /// Default Alacritty name, used for window title and class.
 pub const DEFAULT_NAME: &str = "Alacritty";
@@ -93,25 +91,6 @@ impl WindowConfig {
         if lines_is_non_zero && columns_is_non_zero {
             // Return dimensions if both `lines` and `columns` are non-zero.
             Some(self.dimensions)
-        } else if lines_is_non_zero || columns_is_non_zero {
-            // Warn if either `columns` or `lines` is non-zero.
-
-            let (zero_key, non_zero_key, non_zero_value) = if lines_is_non_zero {
-                ("columns", "lines", lines)
-            } else {
-                ("lines", "columns", columns)
-            };
-
-            warn!(
-                target: LOG_TARGET_CONFIG,
-                "Both `lines` and `columns` must be non-zero for `window.dimensions` to take \
-                 effect. Configured value of `{}` is 0 while that of `{}` is {}",
-                zero_key,
-                non_zero_key,
-                non_zero_value,
-            );
-
-            None
         } else {
             None
         }
@@ -247,23 +226,13 @@ impl<'de> Deserialize<'de> for Class {
                     match key.as_str() {
                         "instance" => match String::deserialize(value) {
                             Ok(instance) => class.instance = instance,
-                            Err(err) => {
-                                error!(
-                                    target: LOG_TARGET_CONFIG,
-                                    "Config error: class.instance: {}", err
-                                );
-                            },
+                            Err(_) => {},
                         },
                         "general" => match String::deserialize(value) {
                             Ok(general) => class.general = general,
-                            Err(err) => {
-                                error!(
-                                    target: LOG_TARGET_CONFIG,
-                                    "Config error: class.instance: {}", err
-                                );
-                            },
+                            Err(_) => {},
                         },
-                        key => warn!(target: LOG_TARGET_CONFIG, "Unrecognized class field: {key}"),
+                        _ => (),
                     }
                 }
 

@@ -9,7 +9,7 @@ use alacritty_config::SerdeReplace;
 use alacritty_terminal::term::Config as TermConfig;
 use alacritty_terminal::term::Osc52;
 use alacritty_terminal::tty::{Options as PtyOptions, Shell};
-use log::{error, warn};
+use log::error;
 use serde::de::{Error as SerdeError, MapAccess, Visitor};
 use serde::{self, Deserialize, Deserializer};
 use unicode_width::UnicodeWidthChar;
@@ -28,7 +28,6 @@ use crate::config::font::Font;
 use crate::config::mouse::{Mouse, MouseBindings};
 use crate::config::selection::Selection;
 use crate::config::window::WindowConfig;
-use crate::config::LOG_TARGET_CONFIG;
 
 /// Regex used for the default URL hint.
 #[rustfmt::skip]
@@ -215,9 +214,7 @@ where
     for value in values {
         match Binding::<T>::deserialize(value) {
             Ok(binding) => bindings.push(binding),
-            Err(err) => {
-                error!(target: LOG_TARGET_CONFIG, "Config error: {}; ignoring binding", err);
-            },
+            Err(_) => {},
         }
     }
 
@@ -416,24 +413,14 @@ impl<'de> Deserialize<'de> for HintContent {
                     match key.as_str() {
                         "regex" => match Option::<LazyRegex>::deserialize(value) {
                             Ok(regex) => content.regex = regex,
-                            Err(err) => {
-                                error!(
-                                    target: LOG_TARGET_CONFIG,
-                                    "Config error: hint's regex: {}", err
-                                );
-                            },
+                            Err(_) => {},
                         },
                         "hyperlinks" => match bool::deserialize(value) {
                             Ok(hyperlink) => content.hyperlinks = hyperlink,
-                            Err(err) => {
-                                error!(
-                                    target: LOG_TARGET_CONFIG,
-                                    "Config error: hint's hyperlinks: {}", err
-                                );
-                            },
+                            Err(_) => {},
                         },
                         "command" | "action" => (),
-                        key => warn!(target: LOG_TARGET_CONFIG, "Unrecognized hint field: {key}"),
+                        _ => (),
                     }
                 }
 

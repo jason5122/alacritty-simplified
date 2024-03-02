@@ -18,7 +18,6 @@ mod mouse;
 
 pub use crate::config::bindings::{Action, BindingKey, BindingMode, SearchAction, ViAction};
 pub use crate::config::ui_config::UiConfig;
-use crate::logging::LOG_TARGET_CONFIG;
 
 /// Errors occurring during config loading.
 #[derive(Debug)]

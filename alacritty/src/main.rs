@@ -29,7 +29,6 @@ mod daemon;
 mod display;
 mod event;
 mod input;
-mod logging;
 #[cfg(target_os = "macos")]
 mod macos;
 mod renderer;
