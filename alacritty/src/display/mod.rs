@@ -329,9 +329,6 @@ pub struct Display {
     /// The renderer update that takes place only once before the actual rendering.
     pub pending_renderer_update: Option<RendererUpdate>,
 
-    /// The ime on the given display.
-    pub ime: Ime,
-
     /// The state of the timer for frame scheduling.
     pub frame_timer: FrameTimer,
 
@@ -479,7 +476,6 @@ impl Display {
             highlighted_hint: Default::default(),
             pending_update: Default::default(),
             cursor_hidden: Default::default(),
-            ime: Default::default(),
         })
     }
 
@@ -724,20 +720,6 @@ impl Drop for Display {
             ManuallyDrop::drop(&mut self.context);
             ManuallyDrop::drop(&mut self.surface);
         }
-    }
-}
-
-/// Input method state.
-#[derive(Debug, Default)]
-pub struct Ime {
-    /// Current IME preedit.
-    preedit: Option<Preedit>,
-}
-
-impl Ime {
-    #[inline]
-    pub fn preedit(&self) -> Option<&Preedit> {
-        self.preedit.as_ref()
     }
 }
 

@@ -188,11 +188,6 @@ pub struct HintMatch {
 
 impl HintMatch {
     #[inline]
-    pub fn should_highlight(&self, point: Point, pointed_hyperlink: Option<&Hyperlink>) -> bool {
-        self.bounds.contains(&point) && self.hyperlink.as_ref() == pointed_hyperlink
-    }
-
-    #[inline]
     pub fn action(&self) -> &HintAction {
         &self.action
     }

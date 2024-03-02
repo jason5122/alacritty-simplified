@@ -43,7 +43,7 @@ use crate::daemon::spawn_daemon;
 use crate::display::hint::HintMatch;
 use crate::display::window::Window;
 use crate::display::{Display, SizeInfo};
-use crate::input::{self, ActionContext as _, FONT_SIZE_STEP};
+use crate::input::{self, ActionContext as _};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::window_context::WindowContext;
 
@@ -55,9 +55,6 @@ const MAX_SEARCH_WHILE_TYPING: Option<usize> = Some(1000);
 
 /// Maximum number of search terms stored in the history.
 const MAX_SEARCH_HISTORY_SIZE: usize = 255;
-
-/// Touch zoom speed.
-const TOUCH_ZOOM_FACTOR: f32 = 0.01;
 
 /// Alacritty events.
 #[derive(Debug, Clone)]
@@ -931,25 +928,6 @@ impl TouchZoom {
         Self { slots, fractions: Default::default() }
     }
 
-    /// Get slot distance change since last update.
-    pub fn font_delta(&mut self, slot: TouchEvent) -> f32 {
-        let old_distance = self.distance();
-
-        // Update touch slots.
-        if slot.id == self.slots.0.id {
-            self.slots.0 = slot;
-        } else {
-            self.slots.1 = slot;
-        }
-
-        // Calculate font change in `FONT_SIZE_STEP` increments.
-        let delta = (self.distance() - old_distance) * TOUCH_ZOOM_FACTOR + self.fractions;
-        let font_delta = (delta.abs() / FONT_SIZE_STEP).floor() * FONT_SIZE_STEP * delta.signum();
-        self.fractions = delta - font_delta;
-
-        font_delta
-    }
-
     /// Get active touch slots.
     pub fn slots(&self) -> HashSet<u64, RandomState> {
         let mut set = HashSet::default();
@@ -1026,9 +1004,6 @@ impl Mouse {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ClickState {
     None,
-    Click,
-    DoubleClick,
-    TripleClick,
 }
 
 /// The amount of scroll accumulated from the pointer events.

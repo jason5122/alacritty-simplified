@@ -19,13 +19,13 @@ use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 use alacritty_terminal::term::search::RegexSearch;
 
 use crate::config::bindings::{
-    self, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper, MouseBinding,
+    self, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper,
 };
 use crate::config::color::Colors;
 use crate::config::cursor::Cursor;
 use crate::config::debug::Debug;
 use crate::config::font::Font;
-use crate::config::mouse::{Mouse, MouseBindings};
+use crate::config::mouse::Mouse;
 use crate::config::selection::Selection;
 use crate::config::window::WindowConfig;
 
@@ -85,14 +85,6 @@ pub struct UiConfig {
     #[config(deprecated = "use colors.draw_bold_text_with_bright_colors instead")]
     draw_bold_text_with_bright_colors: bool,
 
-    /// Keybindings.
-    #[config(deprecated = "use keyboard.bindings instead")]
-    key_bindings: Option<KeyBindings>,
-
-    /// Bindings for the mouse.
-    #[config(deprecated = "use mouse.bindings instead")]
-    mouse_bindings: Option<MouseBindings>,
-
     /// Configuration file imports.
     ///
     /// This is never read since the field is directly accessed through the config's
@@ -105,9 +97,7 @@ impl Default for UiConfig {
         Self {
             draw_bold_text_with_bright_colors: Default::default(),
             working_directory: Default::default(),
-            mouse_bindings: Default::default(),
             config_paths: Default::default(),
-            key_bindings: Default::default(),
             alt_send_esc: Default::default(),
             selection: Default::default(),
             keyboard: Default::default(),
@@ -147,24 +137,6 @@ impl UiConfig {
     #[inline]
     pub fn window_opacity(&self) -> f32 {
         self.window.opacity.as_f32()
-    }
-
-    #[inline]
-    pub fn key_bindings(&self) -> &[KeyBinding] {
-        if let Some(key_bindings) = self.key_bindings.as_ref() {
-            &key_bindings.0
-        } else {
-            &self.keyboard.bindings.0
-        }
-    }
-
-    #[inline]
-    pub fn mouse_bindings(&self) -> &[MouseBinding] {
-        if let Some(mouse_bindings) = self.mouse_bindings.as_ref() {
-            &mouse_bindings.0
-        } else {
-            &self.mouse.bindings.0
-        }
     }
 
     #[inline]

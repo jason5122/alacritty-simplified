@@ -14,7 +14,6 @@ use winit::platform::scancode::PhysicalKeyExtScancode;
 
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 
-use alacritty_terminal::term::TermMode;
 use alacritty_terminal::vi_mode::ViMotion;
 
 use crate::config::ui_config::{Program, StringVisitor};
@@ -49,17 +48,6 @@ pub type KeyBinding = Binding<BindingKey>;
 pub type MouseBinding = Binding<MouseButton>;
 
 impl<T: Eq> Binding<T> {
-    #[inline]
-    pub fn is_triggered_by(&self, mode: BindingMode, mods: ModifiersState, input: &T) -> bool {
-        // Check input first since bindings are stored in one big list. This is
-        // the most likely item to fail so prioritizing it here allows more
-        // checks to be short circuited.
-        self.trigger == *input
-            && self.mods == mods
-            && mode.contains(self.mode)
-            && !mode.intersects(self.notmode)
-    }
-
     #[inline]
     pub fn triggers_match(&self, binding: &Binding<T>) -> bool {
         // Check the binding's key and modifiers.
@@ -726,26 +714,6 @@ bitflags! {
         const SEARCH                 = 0b0001_0000;
         const DISAMBIGUATE_ESC_CODES = 0b0010_0000;
         const REPORT_ALL_KEYS_AS_ESC = 0b0100_0000;
-    }
-}
-
-impl BindingMode {
-    pub fn new(mode: &TermMode, search: bool) -> BindingMode {
-        let mut binding_mode = BindingMode::empty();
-        binding_mode.set(BindingMode::APP_CURSOR, mode.contains(TermMode::APP_CURSOR));
-        binding_mode.set(BindingMode::APP_KEYPAD, mode.contains(TermMode::APP_KEYPAD));
-        binding_mode.set(BindingMode::ALT_SCREEN, mode.contains(TermMode::ALT_SCREEN));
-        binding_mode.set(BindingMode::VI, mode.contains(TermMode::VI));
-        binding_mode.set(BindingMode::SEARCH, search);
-        binding_mode.set(
-            BindingMode::DISAMBIGUATE_ESC_CODES,
-            mode.contains(TermMode::DISAMBIGUATE_ESC_CODES),
-        );
-        binding_mode.set(
-            BindingMode::REPORT_ALL_KEYS_AS_ESC,
-            mode.contains(TermMode::REPORT_ALL_KEYS_AS_ESC),
-        );
-        binding_mode
     }
 }
 

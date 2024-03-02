@@ -24,7 +24,6 @@ impl TimerId {
 /// Available timer topics.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Topic {
-    SelectionScrolling,
     DelayedSearch,
     Frame,
 }
