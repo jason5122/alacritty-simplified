@@ -1072,56 +1072,15 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
 
                         self.ctx.display.pending_update.set_dimensions(size);
                     },
-                    WindowEvent::KeyboardInput { event, is_synthetic: false, .. } => {
-                        self.key_input(event);
-                    },
-                    WindowEvent::ModifiersChanged(modifiers) => self.modifiers_input(modifiers),
-                    WindowEvent::MouseInput { state, button, .. } => {
-                        self.ctx.window().set_mouse_visible(true);
-                        self.mouse_input(state, button);
-                    },
-                    WindowEvent::CursorMoved { position, .. } => {
-                        self.ctx.window().set_mouse_visible(true);
-                        self.mouse_moved(position);
-                    },
-                    WindowEvent::MouseWheel { delta, phase, .. } => {
-                        self.ctx.window().set_mouse_visible(true);
-                        self.mouse_wheel_input(delta, phase);
-                    },
-                    WindowEvent::Touch(touch) => self.touch(touch),
-                    WindowEvent::Focused(is_focused) => {
-                        self.ctx.terminal.is_focused = is_focused;
-
-                        // When the unfocused hollow is used we must redraw on focus change.
-                        if self.ctx.config.cursor.unfocused_hollow {
-                            *self.ctx.dirty = true;
-                        }
-
-                        // Reset the urgency hint when gaining focus.
-                        if is_focused {
-                            self.ctx.window().set_urgent(false);
-                        }
-
-                        self.on_focus_change(is_focused);
-                    },
-                    WindowEvent::Occluded(occluded) => {
-                        *self.ctx.occluded = occluded;
-                    },
-                    WindowEvent::DroppedFile(path) => {
-                        let path: String = path.to_string_lossy().into();
-                        self.ctx.paste(&(path + " "), true);
-                    },
-                    WindowEvent::CursorLeft { .. } => {
-                        self.ctx.mouse.inside_text_area = false;
-
-                        if self.ctx.display().highlighted_hint.is_some() {
-                            *self.ctx.dirty = true;
-                        }
-                    },
-                    WindowEvent::Ime(_) => (),
+                    WindowEvent::KeyboardInput { event: _, is_synthetic: false, .. } => (),
+                    WindowEvent::ModifiersChanged(_) => (),
+                    WindowEvent::MouseInput { state: _, button: _, .. } => (),
+                    WindowEvent::CursorMoved { position: _, .. } => (),
+                    WindowEvent::MouseWheel { delta: _, phase: _, .. } => (),
                     WindowEvent::KeyboardInput { is_synthetic: true, .. }
                     | WindowEvent::ActivationTokenDone { .. }
                     | WindowEvent::TouchpadPressure { .. }
+                    | WindowEvent::CursorLeft { .. }
                     | WindowEvent::TouchpadMagnify { .. }
                     | WindowEvent::TouchpadRotate { .. }
                     | WindowEvent::SmartMagnify { .. }
@@ -1132,7 +1091,12 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                     | WindowEvent::ThemeChanged(_)
                     | WindowEvent::HoveredFile(_)
                     | WindowEvent::RedrawRequested
-                    | WindowEvent::Moved(_) => (),
+                    | WindowEvent::Moved(_)
+                    | WindowEvent::Touch(_)
+                    | WindowEvent::Focused(_)
+                    | WindowEvent::Occluded(_)
+                    | WindowEvent::DroppedFile(_)
+                    | WindowEvent::Ime(_) => (),
                 }
             },
             WinitEvent::Suspended { .. }
