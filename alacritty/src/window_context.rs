@@ -30,7 +30,7 @@ use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::event::{ActionContext, Event, EventProxy, Mouse, TouchPurpose};
+use crate::event::{ActionContext, Event, EventProxy};
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
 

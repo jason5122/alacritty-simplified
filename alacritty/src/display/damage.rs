@@ -96,64 +96,6 @@ impl FrameDamage {
     }
 }
 
-/// Iterator which converts `alacritty_terminal` damage information into renderer damaged rects.
-struct RenderDamageIterator<'a> {
-    damaged_lines: Peekable<TermDamageIterator<'a>>,
-    size_info: &'a SizeInfo<u32>,
-}
-
-impl<'a> RenderDamageIterator<'a> {
-    #[inline]
-    fn rect_for_line(&self, line_damage: LineDamageBounds) -> Rect {
-        let size_info = &self.size_info;
-        let y_top = size_info.height() - size_info.padding_y();
-        let x = size_info.padding_x() + line_damage.left as u32 * size_info.cell_width();
-        let y = y_top - (line_damage.line + 1) as u32 * size_info.cell_height();
-        let width = (line_damage.right - line_damage.left + 1) as u32 * size_info.cell_width();
-        Rect::new(x as i32, y as i32, width as i32, size_info.cell_height() as i32)
-    }
-
-    // Make sure to damage near cells to include wide chars.
-    #[inline]
-    fn overdamage(size_info: &SizeInfo<u32>, mut rect: Rect) -> Rect {
-        rect.x = (rect.x - size_info.cell_width() as i32).max(0);
-        rect.width = cmp::min(
-            size_info.width() as i32 - rect.x,
-            rect.width + 2 * size_info.cell_width() as i32,
-        );
-        rect.y = (rect.y - size_info.cell_height() as i32 / 2).max(0);
-        rect.height = cmp::min(
-            size_info.height() as i32 - rect.y,
-            rect.height + size_info.cell_height() as i32,
-        );
-
-        rect
-    }
-}
-
-impl<'a> Iterator for RenderDamageIterator<'a> {
-    type Item = Rect;
-
-    fn next(&mut self) -> Option<Rect> {
-        let line = self.damaged_lines.next()?;
-        let size_info = &self.size_info;
-        let mut total_damage_rect = Self::overdamage(size_info, self.rect_for_line(line));
-
-        // Merge rectangles which overlap with each other.
-        while let Some(line) = self.damaged_lines.peek().copied() {
-            let next_rect = Self::overdamage(size_info, self.rect_for_line(line));
-            if !rects_overlap(total_damage_rect, next_rect) {
-                break;
-            }
-
-            total_damage_rect = merge_rects(total_damage_rect, next_rect);
-            let _ = self.damaged_lines.next();
-        }
-
-        Some(total_damage_rect)
-    }
-}
-
 /// Check if two given [`glutin::surface::Rect`] overlap.
 fn rects_overlap(lhs: Rect, rhs: Rect) -> bool {
     !(

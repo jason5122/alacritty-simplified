@@ -96,61 +96,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
     }
 }
 
-/// Identified purpose of the touch input.
-#[derive(Debug)]
-pub enum TouchPurpose {
-    None,
-}
-
-impl Default for TouchPurpose {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-/// State of the mouse.
-#[derive(Debug)]
-pub struct Mouse {
-    pub left_button_state: ElementState,
-    pub middle_button_state: ElementState,
-    pub right_button_state: ElementState,
-    pub last_click_timestamp: Instant,
-    pub last_click_button: MouseButton,
-    pub click_state: ClickState,
-    pub cell_side: Side,
-    pub lines_scrolled: f32,
-    pub block_hint_launcher: bool,
-    pub hint_highlight_dirty: bool,
-    pub inside_text_area: bool,
-    pub x: usize,
-    pub y: usize,
-}
-
-impl Default for Mouse {
-    fn default() -> Mouse {
-        Mouse {
-            last_click_timestamp: Instant::now(),
-            last_click_button: MouseButton::Left,
-            left_button_state: ElementState::Released,
-            middle_button_state: ElementState::Released,
-            right_button_state: ElementState::Released,
-            click_state: ClickState::None,
-            cell_side: Side::Left,
-            hint_highlight_dirty: Default::default(),
-            block_hint_launcher: Default::default(),
-            inside_text_area: Default::default(),
-            lines_scrolled: Default::default(),
-            x: Default::default(),
-            y: Default::default(),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum ClickState {
-    None,
-}
-
 impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
