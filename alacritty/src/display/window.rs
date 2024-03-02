@@ -33,8 +33,7 @@ use winit::monitor::MonitorHandle;
 #[cfg(windows)]
 use winit::platform::windows::IconExtWindows;
 use winit::window::{
-    CursorIcon, Fullscreen, ImePurpose, UserAttentionType, Window as WinitWindow, WindowBuilder,
-    WindowId,
+    CursorIcon, ImePurpose, UserAttentionType, Window as WinitWindow, WindowBuilder, WindowId,
 };
 
 use crate::config::window::{Decorations, Identity, WindowConfig};
@@ -324,22 +323,8 @@ impl Window {
         self.window.set_maximized(maximized);
     }
 
-    pub fn set_minimized(&self, minimized: bool) {
-        self.window.set_minimized(minimized);
-    }
-
     pub fn set_resize_increments(&self, increments: PhysicalSize<f32>) {
         self.window.set_resize_increments(Some(increments));
-    }
-
-    /// Toggle the window's fullscreen state.
-    pub fn toggle_fullscreen(&self) {
-        self.set_fullscreen(self.window.fullscreen().is_none());
-    }
-
-    /// Toggle the window's maximized state.
-    pub fn toggle_maximized(&self) {
-        self.set_maximized(!self.window.is_maximized());
     }
 
     /// Inform windowing system about presenting to the window.
@@ -347,19 +332,6 @@ impl Window {
     /// Should be called right before presenting to the window with e.g. `eglSwapBuffers`.
     pub fn pre_present_notify(&self) {
         self.window.pre_present_notify();
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn toggle_simple_fullscreen(&self) {
-        self.set_simple_fullscreen(!self.window.simple_fullscreen());
-    }
-
-    pub fn set_fullscreen(&self, fullscreen: bool) {
-        if fullscreen {
-            self.window.set_fullscreen(Some(Fullscreen::Borderless(None)));
-        } else {
-            self.window.set_fullscreen(None);
-        }
     }
 
     pub fn current_monitor(&self) -> Option<MonitorHandle> {
@@ -392,35 +364,6 @@ impl Window {
         unsafe {
             let _: id = msg_send![raw_window, setHasShadow: value];
         }
-    }
-
-    /// Select tab at the given `index`.
-    #[cfg(target_os = "macos")]
-    pub fn select_tab_at_index(&self, index: usize) {
-        self.window.select_tab_at_index(index);
-    }
-
-    /// Select the last tab.
-    #[cfg(target_os = "macos")]
-    pub fn select_last_tab(&self) {
-        self.window.select_tab_at_index(self.window.num_tabs() - 1);
-    }
-
-    /// Select next tab.
-    #[cfg(target_os = "macos")]
-    pub fn select_next_tab(&self) {
-        self.window.select_next_tab();
-    }
-
-    /// Select previous tab.
-    #[cfg(target_os = "macos")]
-    pub fn select_previous_tab(&self) {
-        self.window.select_previous_tab();
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn tabbing_id(&self) -> String {
-        self.window.tabbing_identifier()
     }
 }
 

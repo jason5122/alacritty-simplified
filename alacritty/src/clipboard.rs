@@ -1,4 +1,4 @@
-use log::{debug, warn};
+use log::warn;
 use raw_window_handle::RawDisplayHandle;
 
 use alacritty_terminal::term::ClipboardType;
@@ -66,20 +66,5 @@ impl Clipboard {
         clipboard.set_contents(text.into()).unwrap_or_else(|err| {
             warn!("Unable to store text in clipboard: {}", err);
         });
-    }
-
-    pub fn load(&mut self, ty: ClipboardType) -> String {
-        let clipboard = match (ty, &mut self.selection) {
-            (ClipboardType::Selection, Some(provider)) => provider,
-            _ => &mut self.clipboard,
-        };
-
-        match clipboard.get_contents() {
-            Err(err) => {
-                debug!("Unable to load text from clipboard: {}", err);
-                String::new()
-            },
-            Ok(text) => text,
-        }
     }
 }

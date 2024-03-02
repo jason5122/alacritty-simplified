@@ -16,7 +16,7 @@ pub mod window;
 mod bindings;
 mod mouse;
 
-pub use crate::config::bindings::{Action, BindingKey, BindingMode, SearchAction, ViAction};
+pub use crate::config::bindings::{Action, BindingKey, BindingMode};
 pub use crate::config::ui_config::UiConfig;
 
 /// Errors occurring during config loading.
