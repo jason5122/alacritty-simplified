@@ -45,52 +45,16 @@ pub trait ActionContext<T: EventListener> {
     fn mouse(&self) -> &Mouse;
     fn touch_purpose(&mut self) -> &mut TouchPurpose;
     fn modifiers(&mut self) -> &mut Modifiers;
-    fn scroll(&mut self, _scroll: Scroll) {}
     fn window(&mut self) -> &mut Window;
     fn display(&mut self) -> &mut Display;
     fn terminal(&self) -> &Term<T>;
     fn terminal_mut(&mut self) -> &mut Term<T>;
-    fn spawn_new_instance(&mut self) {}
-    #[cfg(target_os = "macos")]
-    fn create_new_window(&mut self, _tabbing_id: Option<String>) {}
-    #[cfg(not(target_os = "macos"))]
-    fn create_new_window(&mut self) {}
-    fn change_font_size(&mut self, _delta: f32) {}
-    fn reset_font_size(&mut self) {}
-    fn pop_message(&mut self) {}
     fn config(&self) -> &UiConfig;
     #[cfg(target_os = "macos")]
     fn event_loop(&self) -> &EventLoopWindowTarget<Event>;
     fn mouse_mode(&self) -> bool;
     fn clipboard_mut(&mut self) -> &mut Clipboard;
     fn scheduler_mut(&mut self) -> &mut Scheduler;
-    fn start_search(&mut self, _direction: Direction) {}
-    fn confirm_search(&mut self) {}
-    fn cancel_search(&mut self) {}
-    fn search_input(&mut self, _c: char) {}
-    fn search_pop_word(&mut self) {}
-    fn search_history_previous(&mut self) {}
-    fn search_history_next(&mut self) {}
-    fn search_next(&mut self, origin: Point, direction: Direction, side: Side) -> Option<Match>;
-    fn advance_search_origin(&mut self, _direction: Direction) {}
-    fn search_direction(&self) -> Direction;
-    fn search_active(&self) -> bool;
-    fn on_typing_start(&mut self) {}
-    fn toggle_vi_mode(&mut self) {}
-    fn inline_search_state(&mut self) -> &mut InlineSearchState;
-    fn start_inline_search(&mut self, _direction: Direction, _stop_short: bool) {}
-    fn inline_search_next(&mut self) {}
-    fn inline_search_previous(&mut self) {}
-    fn hint_input(&mut self, _character: char) {}
-    fn trigger_hint(&mut self, _hint: &HintMatch) {}
-    fn on_terminal_input_start(&mut self) {}
-    fn paste(&mut self, _text: &str, _bracketed: bool) {}
-    fn spawn_daemon<I, S>(&self, _program: &str, _args: I)
-    where
-        I: IntoIterator<Item = S> + Debug + Copy,
-        S: AsRef<OsStr>,
-    {
-    }
 }
 
 trait Execute<T: EventListener> {
