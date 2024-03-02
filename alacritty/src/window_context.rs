@@ -77,7 +77,7 @@ impl WindowContext {
         // Windows has different order of GL platform initialization compared to any other platform;
         // it requires the window first.
         #[cfg(windows)]
-        let window = Window::new(event_loop, &config, &identity)?;
+        let window = Window::new(event_loop, &config)?;
         #[cfg(windows)]
         let raw_window_handle = Some(window.raw_window_handle());
 
@@ -95,7 +95,6 @@ impl WindowContext {
         let window = Window::new(
             event_loop,
             &config,
-            &identity,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             gl_config.x11_visual(),
             #[cfg(target_os = "macos")]
@@ -301,16 +300,6 @@ impl WindowContext {
                 &self.config,
             );
             self.dirty = true;
-        }
-
-        if self.dirty || self.mouse.hint_highlight_dirty {
-            self.dirty |= self.display.update_highlighted_hints(
-                &terminal,
-                &self.config,
-                &self.mouse,
-                self.modifiers.state(),
-            );
-            self.mouse.hint_highlight_dirty = false;
         }
 
         // Don't call `request_redraw` when event is `RedrawRequested` since the `dirty` flag

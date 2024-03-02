@@ -17,17 +17,13 @@ use parking_lot::MutexGuard;
 use raw_window_handle::RawWindowHandle;
 use serde::{Deserialize, Serialize};
 use winit::dpi::PhysicalSize;
-use winit::keyboard::ModifiersState;
-use winit::window::CursorIcon;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 use unicode_width::UnicodeWidthChar;
 
 use alacritty_terminal::event::{EventListener, OnResize, WindowSize};
 use alacritty_terminal::grid::Dimensions as TermDimensions;
-use alacritty_terminal::index::Point;
-use alacritty_terminal::selection::Selection;
-use alacritty_terminal::term::{Term, TermMode, MIN_COLUMNS, MIN_SCREEN_LINES};
+use alacritty_terminal::term::{Term, MIN_COLUMNS, MIN_SCREEN_LINES};
 
 use crate::config::font::Font;
 use crate::config::window::Dimensions;
@@ -39,7 +35,7 @@ use crate::display::color::{List, Rgb};
 use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
 use crate::display::window::Window;
-use crate::event::{Event, EventType, Mouse, SearchState};
+use crate::event::{Event, EventType, SearchState};
 use crate::message_bar::MessageBuffer;
 use crate::renderer::rects::RenderRect;
 use crate::renderer::{self, GlyphCache, Renderer};
@@ -352,9 +348,6 @@ pub struct Display {
     /// Font size used by the window.
     pub font_size: FontSize,
 
-    // Mouse point position when highlighting hints.
-    hint_mouse_point: Option<Point>,
-
     renderer: ManuallyDrop<Renderer>,
 
     surface: ManuallyDrop<Surface<WindowSurface>>,
@@ -492,7 +485,6 @@ impl Display {
             pending_renderer_update: Default::default(),
             vi_highlighted_hint: Default::default(),
             highlighted_hint: Default::default(),
-            hint_mouse_point: Default::default(),
             pending_update: Default::default(),
             cursor_hidden: Default::default(),
             ime: Default::default(),
@@ -716,60 +708,6 @@ impl Display {
         }
 
         self.damage_tracker.swap_damage();
-    }
-
-    /// Update the mouse/vi mode cursor hint highlighting.
-    ///
-    /// This will return whether the highlighted hints changed.
-    pub fn update_highlighted_hints<T>(
-        &mut self,
-        term: &Term<T>,
-        config: &UiConfig,
-        mouse: &Mouse,
-        modifiers: ModifiersState,
-    ) -> bool {
-        // Update vi mode cursor hint.
-        let vi_highlighted_hint = if term.mode().contains(TermMode::VI) {
-            let mods = ModifiersState::all();
-            let point = term.vi_mode_cursor.point;
-            hint::highlighted_at(term, config, point, mods)
-        } else {
-            None
-        };
-        let mut dirty = vi_highlighted_hint != self.vi_highlighted_hint;
-        self.vi_highlighted_hint = vi_highlighted_hint;
-
-        // Abort if mouse highlighting conditions are not met.
-        if !mouse.inside_text_area || !term.selection.as_ref().map_or(true, Selection::is_empty) {
-            dirty |= self.highlighted_hint.is_some();
-            self.highlighted_hint = None;
-            return dirty;
-        }
-
-        // Find highlighted hint at mouse position.
-        let point = mouse.point(&self.size_info, term.grid().display_offset());
-        let highlighted_hint = hint::highlighted_at(term, config, point, modifiers);
-
-        // Update cursor shape.
-        if highlighted_hint.is_some() {
-            // If mouse changed the line, we should update the hyperlink preview, since the
-            // highlighted hint could be disrupted by the old preview.
-            dirty = self.hint_mouse_point.map_or(false, |p| p.line != point.line);
-            self.hint_mouse_point = Some(point);
-            self.window.set_mouse_cursor(CursorIcon::Pointer);
-        } else if self.highlighted_hint.is_some() {
-            self.hint_mouse_point = None;
-            if term.mode().intersects(TermMode::MOUSE_MODE) && !term.mode().contains(TermMode::VI) {
-                self.window.set_mouse_cursor(CursorIcon::Default);
-            } else {
-                self.window.set_mouse_cursor(CursorIcon::Text);
-            }
-        }
-
-        dirty |= self.highlighted_hint != highlighted_hint;
-        self.highlighted_hint = highlighted_hint;
-
-        dirty
     }
 
     /// Request a new frame for a window on Wayland.

@@ -3,16 +3,14 @@ use std::collections::HashSet;
 use std::iter;
 
 use ahash::RandomState;
-use winit::keyboard::ModifiersState;
 
 use alacritty_terminal::grid::{BidirectionalIterator, Dimensions};
 use alacritty_terminal::index::{Boundary, Column, Direction, Line, Point};
 use alacritty_terminal::term::cell::Hyperlink;
 use alacritty_terminal::term::search::{Match, RegexIter, RegexSearch};
-use alacritty_terminal::term::{Term, TermMode};
+use alacritty_terminal::term::Term;
 
 use crate::config::ui_config::{Hint, HintAction};
-use crate::config::UiConfig;
 
 /// Maximum number of linewraps followed outside of the viewport during search highlighting.
 pub const MAX_SEARCH_LINES: usize = 100;
@@ -331,113 +329,6 @@ pub fn visible_unique_hyperlinks_iter<T>(term: &Term<T>) -> impl Iterator<Item =
 
         Some(start..=end)
     })
-}
-
-/// Retrieve the match, if the specified point is inside the content matching the regex.
-fn regex_match_at<T>(
-    term: &Term<T>,
-    point: Point,
-    regex: &mut RegexSearch,
-    post_processing: bool,
-) -> Option<Match> {
-    let regex_match = visible_regex_match_iter(term, regex).find(|rm| rm.contains(&point))?;
-
-    // Apply post-processing and search for sub-matches if necessary.
-    if post_processing {
-        HintPostProcessor::new(term, regex, regex_match).find(|rm| rm.contains(&point))
-    } else {
-        Some(regex_match)
-    }
-}
-
-/// Check if there is a hint highlighted at the specified point.
-pub fn highlighted_at<T>(
-    term: &Term<T>,
-    config: &UiConfig,
-    point: Point,
-    mouse_mods: ModifiersState,
-) -> Option<HintMatch> {
-    let mouse_mode = term.mode().intersects(TermMode::MOUSE_MODE);
-
-    config.hints.enabled.iter().find_map(|hint| {
-        // Check if all required modifiers are pressed.
-        let highlight = hint.mouse.map_or(false, |mouse| {
-            mouse.enabled
-                && mouse_mods.contains(mouse.mods.0)
-                && (!mouse_mode || mouse_mods.contains(ModifiersState::SHIFT))
-        });
-        if !highlight {
-            return None;
-        }
-
-        if let Some((hyperlink, bounds)) =
-            hint.content.hyperlinks.then(|| hyperlink_at(term, point)).flatten()
-        {
-            return Some(HintMatch {
-                bounds,
-                action: hint.action.clone(),
-                hyperlink: Some(hyperlink),
-            });
-        }
-
-        let bounds = hint.content.regex.as_ref().and_then(|regex| {
-            regex.with_compiled(|regex| regex_match_at(term, point, regex, hint.post_processing))
-        });
-        if let Some(bounds) = bounds.flatten() {
-            return Some(HintMatch { bounds, action: hint.action.clone(), hyperlink: None });
-        }
-
-        None
-    })
-}
-
-/// Retrieve the hyperlink with its range, if there is one at the specified point.
-fn hyperlink_at<T>(term: &Term<T>, point: Point) -> Option<(Hyperlink, Match)> {
-    let hyperlink = term.grid()[point].hyperlink()?;
-
-    let viewport_start = Line(-(term.grid().display_offset() as i32));
-    let viewport_end = viewport_start + term.bottommost_line();
-
-    let mut match_start = Point::new(point.line, Column(0));
-    let mut match_end = Point::new(point.line, Column(term.columns() - 1));
-    let grid = term.grid();
-
-    // Find adjacent lines that have the same `hyperlink`. The end purpose to highlight hyperlinks
-    // that span across multiple lines or not directly attached to each other.
-
-    // Find the closest to the viewport start adjacent line.
-    while match_start.line > viewport_start {
-        let next_line = match_start.line - 1i32;
-        // Iterate over all the cells in the grid's line and check if any of those cells contains
-        // the hyperlink we've found at original `point`.
-        let line_contains_hyperlink = grid[next_line]
-            .into_iter()
-            .any(|cell| cell.hyperlink().map_or(false, |h| h == hyperlink));
-
-        // There's no hyperlink on the next line, break.
-        if !line_contains_hyperlink {
-            break;
-        }
-
-        match_start.line = next_line;
-    }
-
-    // Ditto for the end.
-    while match_end.line < viewport_end {
-        let next_line = match_end.line + 1i32;
-
-        let line_contains_hyperlink = grid[next_line]
-            .into_iter()
-            .any(|cell| cell.hyperlink().map_or(false, |h| h == hyperlink));
-
-        if !line_contains_hyperlink {
-            break;
-        }
-
-        match_end.line = next_line;
-    }
-
-    Some((hyperlink, match_start..=match_end))
 }
 
 /// Iterator over all post-processed matches inside an existing hint match.

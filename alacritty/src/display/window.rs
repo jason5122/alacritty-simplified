@@ -121,7 +121,6 @@ impl Window {
     pub fn new<E>(
         event_loop: &EventLoopWindowTarget<E>,
         config: &UiConfig,
-        identity: &Identity,
         #[rustfmt::skip]
         #[cfg(target_os = "macos")]
         tabbing_id: &Option<String>,
@@ -129,7 +128,7 @@ impl Window {
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
         x11_visual: Option<X11VisualInfo>,
     ) -> Result<Window> {
-        let identity = identity.clone();
+        let identity = Identity::default();
         let mut window_builder = Window::get_platform_window(
             &identity,
             &config.window,
@@ -185,7 +184,7 @@ impl Window {
         use_srgb_color_space(&window);
 
         let scale_factor = window.scale_factor();
-        log::info!("Window scale factor: {}", scale_factor);
+        println!("Window scale factor: {}", scale_factor);
         let is_x11 = matches!(window.raw_window_handle(), RawWindowHandle::Xlib(_));
 
         Ok(Self {
