@@ -1,9 +1,6 @@
-use std::ffi::{CStr, CString, IntoStringError};
+use std::ffi::IntoStringError;
 use std::fmt::{self, Display, Formatter};
 use std::io;
-use std::mem::{self, MaybeUninit};
-use std::os::raw::{c_int, c_void};
-use std::path::PathBuf;
 
 /// Error during working directory retrieval.
 #[derive(Debug)]
@@ -51,29 +48,10 @@ impl From<IntoStringError> for Error {
     }
 }
 
-pub fn cwd(pid: c_int) -> Result<PathBuf, Error> {
-    let mut info = MaybeUninit::<sys::proc_vnodepathinfo>::uninit();
-    let info_ptr = info.as_mut_ptr() as *mut c_void;
-    let size = mem::size_of::<sys::proc_vnodepathinfo>() as c_int;
-
-    let c_str = unsafe {
-        let pidinfo_size = sys::proc_pidinfo(pid, sys::PROC_PIDVNODEPATHINFO, 0, info_ptr, size);
-        match pidinfo_size {
-            c if c < 0 => return Err(io::Error::last_os_error().into()),
-            s if s != size => return Err(Error::InvalidSize),
-            _ => CStr::from_ptr(info.assume_init().pvi_cdir.vip_path.as_ptr()),
-        }
-    };
-
-    Ok(CString::from(c_str).into_string().map(PathBuf::from)?)
-}
-
 /// Bindings for libproc.
 #[allow(non_camel_case_types)]
 mod sys {
     use std::os::raw::{c_char, c_int, c_longlong, c_void};
-
-    pub const PROC_PIDVNODEPATHINFO: c_int = 9;
 
     type gid_t = c_int;
     type off_t = c_longlong;

@@ -25,7 +25,6 @@ use alacritty_terminal::tty;
 mod cli;
 mod clipboard;
 mod config;
-mod daemon;
 mod display;
 mod event;
 mod input;

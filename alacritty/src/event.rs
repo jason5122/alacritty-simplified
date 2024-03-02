@@ -6,7 +6,7 @@ use std::fmt::Debug;
 #[cfg(not(windows))]
 use std::os::unix::io::RawFd;
 use std::rc::Rc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use std::{f32, mem};
 
 use ahash::RandomState;
@@ -23,31 +23,19 @@ use winit::window::WindowId;
 
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener, Notify};
 use alacritty_terminal::event_loop::Notifier;
-use alacritty_terminal::grid::{BidirectionalIterator, Dimensions, Scroll};
-use alacritty_terminal::index::{Boundary, Column, Direction, Line, Point, Side};
+use alacritty_terminal::grid::Scroll;
+use alacritty_terminal::index::{Direction, Point, Side};
 use alacritty_terminal::term::search::{Match, RegexSearch};
-use alacritty_terminal::term::{ClipboardType, Term, TermMode};
+use alacritty_terminal::term::Term;
 
 use crate::cli::WindowOptions;
 use crate::clipboard::Clipboard;
-use crate::config::ui_config::{HintAction, HintInternalAction};
 use crate::config::UiConfig;
-use crate::daemon::spawn_daemon;
-use crate::display::hint::HintMatch;
 use crate::display::window::Window;
-use crate::display::{Display, SizeInfo};
+use crate::display::Display;
 use crate::input::{self, ActionContext as _};
-use crate::scheduler::{Scheduler, TimerId, Topic};
+use crate::scheduler::Scheduler;
 use crate::window_context::WindowContext;
-
-/// Duration after the last user input until an unlimited search is performed.
-pub const TYPING_SEARCH_DELAY: Duration = Duration::from_millis(500);
-
-/// Maximum number of lines for the blocking search while still typing the search regex.
-const MAX_SEARCH_WHILE_TYPING: Option<usize> = Some(1000);
-
-/// Maximum number of search terms stored in the history.
-const MAX_SEARCH_HISTORY_SIZE: usize = 255;
 
 /// Alacritty events.
 #[derive(Debug, Clone)]

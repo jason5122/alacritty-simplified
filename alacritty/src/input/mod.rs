@@ -1,32 +1,9 @@
-//! Handle input from winit.
-//!
-//! Certain key combinations should send some escape sequence back to the PTY.
-//! In order to figure that out, state about which modifier keys are pressed
-//! needs to be tracked. Additionally, we need a bit of a state machine to
-//! determine what to do when a non-modifier key is pressed.
-
-use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::fmt::Debug;
 use std::marker::PhantomData;
 
-use winit::event::Modifiers;
-#[cfg(target_os = "macos")]
-use winit::event_loop::EventLoopWindowTarget;
-
 use alacritty_terminal::event::EventListener;
-use alacritty_terminal::grid::Scroll;
-use alacritty_terminal::index::{Direction, Point, Side};
-use alacritty_terminal::term::search::Match;
-use alacritty_terminal::term::Term;
 
-use crate::clipboard::Clipboard;
-use crate::config::{Action, UiConfig};
-use crate::display::hint::HintMatch;
+use crate::config::Action;
 use crate::display::window::Window;
-use crate::display::{Display, SizeInfo};
-use crate::event::{Event, InlineSearchState, Mouse, TouchPurpose};
-use crate::scheduler::Scheduler;
 
 /// Processes input from winit.
 ///
