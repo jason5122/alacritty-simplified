@@ -29,8 +29,6 @@ use crate::config::window::Dimensions;
 use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
-use crate::display::damage::DamageTracker;
-use crate::display::hint::{HintMatch, HintState};
 use crate::display::window::Window;
 use crate::event::{Event, EventType};
 use crate::renderer::rects::RenderRect;
@@ -40,11 +38,7 @@ use crate::scheduler::{Scheduler, TimerId, Topic};
 pub mod color;
 pub mod content;
 pub mod cursor;
-pub mod hint;
 pub mod window;
-
-mod damage;
-mod meter;
 
 #[derive(Debug)]
 pub enum Error {
@@ -306,12 +300,6 @@ pub struct Display {
 
     pub size_info: SizeInfo,
 
-    /// Hint highlighted by the mouse.
-    pub highlighted_hint: Option<HintMatch>,
-
-    /// Hint highlighted by the vi mode cursor.
-    pub vi_highlighted_hint: Option<HintMatch>,
-
     pub raw_window_handle: RawWindowHandle,
 
     /// UI cursor visibility for blinking.
@@ -319,9 +307,6 @@ pub struct Display {
 
     /// Mapped RGB values for each terminal color.
     pub colors: List,
-
-    /// State of the keyboard hints.
-    pub hint_state: HintState,
 
     /// Unprocessed display updates.
     pub pending_update: DisplayUpdate,
@@ -331,9 +316,6 @@ pub struct Display {
 
     /// The state of the timer for frame scheduling.
     pub frame_timer: FrameTimer,
-
-    /// Damage tracker for the given display.
-    pub damage_tracker: DamageTracker,
 
     /// Font size used by the window.
     pub font_size: FontSize,
@@ -448,11 +430,6 @@ impl Display {
             }
         }
 
-        let hint_state = HintState::new(config.hints.alphabet());
-
-        let mut damage_tracker = DamageTracker::new(size_info.screen_lines(), size_info.columns());
-        damage_tracker.debug = config.debug.highlight_damage;
-
         // Disable vsync.
         if let Err(err) = surface.set_swap_interval(&context, SwapInterval::DontWait) {
             info!("Failed to disable vsync: {}", err);
@@ -465,15 +442,11 @@ impl Display {
             colors: List::from(&config.colors),
             frame_timer: FrameTimer::new(),
             raw_window_handle,
-            damage_tracker,
             glyph_cache,
-            hint_state,
             size_info,
             font_size,
             window,
             pending_renderer_update: Default::default(),
-            vi_highlighted_hint: Default::default(),
-            highlighted_hint: Default::default(),
             pending_update: Default::default(),
             cursor_hidden: Default::default(),
         })
@@ -551,10 +524,6 @@ impl Display {
             cell_height = cell_dimensions.1;
 
             info!("Cell size: {} x {}", cell_width, cell_height);
-
-            // Mark entire terminal as damaged since glyph size could change without cell size
-            // changes.
-            self.damage_tracker.frame().mark_fully_damaged();
         }
 
         let (mut width, mut height) = (self.size_info.width(), self.size_info.height());
@@ -589,9 +558,6 @@ impl Display {
 
             // Resize terminal.
             terminal.resize(new_size);
-
-            // Resize damage tracking.
-            self.damage_tracker.resize(new_size.screen_lines(), new_size.columns());
         }
 
         // Check if dimensions have changed.
@@ -675,8 +641,6 @@ impl Display {
         if !matches!(self.raw_window_handle, RawWindowHandle::Wayland(_)) {
             self.request_frame(scheduler);
         }
-
-        self.damage_tracker.swap_damage();
     }
 
     /// Request a new frame for a window on Wayland.

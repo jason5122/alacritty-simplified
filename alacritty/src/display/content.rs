@@ -11,7 +11,6 @@ use alacritty_terminal::vte::ansi::{Color, CursorShape, NamedColor};
 
 use crate::config::UiConfig;
 use crate::display::color::{CellRgb, List, Rgb, DIM_FACTOR};
-use crate::display::hint::HintState;
 use crate::display::SizeInfo;
 
 /// Minimum contrast between a fixed cursor color and the cell's background.
@@ -25,8 +24,6 @@ pub struct RenderableContent<'a> {
     cursor: RenderableCursor,
     cursor_shape: CursorShape,
     cursor_point: Point<usize>,
-    search: Option<HintMatches<'a>>,
-    hint: Option<Hint<'a>>,
     config: &'a UiConfig,
     colors: &'a List,
     focused_match: Option<&'a Match>,
@@ -158,44 +155,6 @@ impl RenderableCell {
         let mut flags = cell.flags;
 
         let num_cols = content.size.columns();
-        if let Some((c, is_first)) = content
-            .hint
-            .as_mut()
-            .and_then(|hint| hint.advance(viewport_start, num_cols, cell.point))
-        {
-            if is_first {
-                let (config_fg, config_bg) =
-                    (colors.hints.start.foreground, colors.hints.start.background);
-                Self::compute_cell_rgb(&mut fg, &mut bg, &mut bg_alpha, config_fg, config_bg);
-            } else if c.is_some() {
-                let (config_fg, config_bg) =
-                    (colors.hints.end.foreground, colors.hints.end.background);
-                Self::compute_cell_rgb(&mut fg, &mut bg, &mut bg_alpha, config_fg, config_bg);
-            } else {
-                flags.insert(Flags::UNDERLINE);
-            }
-
-            character = c.unwrap_or(character);
-        } else if is_selected {
-            let config_fg = colors.selection.foreground;
-            let config_bg = colors.selection.background;
-            Self::compute_cell_rgb(&mut fg, &mut bg, &mut bg_alpha, config_fg, config_bg);
-
-            if fg == bg && !cell.flags.contains(Flags::HIDDEN) {
-                // Reveal inversed text when fg/bg is the same.
-                fg = content.color(NamedColor::Background as usize);
-                bg = content.color(NamedColor::Foreground as usize);
-                bg_alpha = 1.0;
-            }
-        } else if content.search.as_mut().map_or(false, |search| search.advance(cell.point)) {
-            let focused = content.focused_match.map_or(false, |fm| fm.contains(&cell.point));
-            let (config_fg, config_bg) = if focused {
-                (colors.search.focused_match.foreground, colors.search.focused_match.background)
-            } else {
-                (colors.search.matches.foreground, colors.search.matches.background)
-            };
-            Self::compute_cell_rgb(&mut fg, &mut bg, &mut bg_alpha, config_fg, config_bg);
-        }
 
         // Apply transparency to all renderable cells if `transparent_background_colors` is set
         if bg_alpha > 0. && content.config.colors.transparent_background_colors {
@@ -346,106 +305,5 @@ impl RenderableCursor {
 
     pub fn point(&self) -> Point<usize> {
         self.point
-    }
-}
-
-/// Regex hints for keyboard shortcuts.
-struct Hint<'a> {
-    /// Hint matches and position.
-    matches: HintMatches<'a>,
-
-    /// Last match checked against current cell position.
-    labels: &'a Vec<Vec<char>>,
-}
-
-impl<'a> Hint<'a> {
-    /// Advance the hint iterator.
-    ///
-    /// If the point is within a hint, the keyboard shortcut character that should be displayed at
-    /// this position will be returned.
-    ///
-    /// The tuple's [`bool`] will be `true` when the character is the first for this hint.
-    ///
-    /// The tuple's [`Option<char>`] will be [`None`] when the point is part of the match, but not
-    /// part of the hint label.
-    fn advance(
-        &mut self,
-        viewport_start: Point,
-        num_cols: usize,
-        point: Point,
-    ) -> Option<(Option<char>, bool)> {
-        // Check if we're within a match at all.
-        if !self.matches.advance(point) {
-            return None;
-        }
-
-        // Match starting position on this line; linebreaks interrupt the hint labels.
-        let start = self
-            .matches
-            .get(self.matches.index)
-            .map(|bounds| cmp::max(*bounds.start(), viewport_start))?;
-
-        // Position within the hint label.
-        let line_delta = point.line.0 - start.line.0;
-        let col_delta = point.column.0 as i32 - start.column.0 as i32;
-        let label_position = usize::try_from(line_delta * num_cols as i32 + col_delta).unwrap_or(0);
-        let is_first = label_position == 0;
-
-        // Hint label character.
-        let hint_char = self.labels[self.matches.index]
-            .get(label_position)
-            .copied()
-            .map(|c| (Some(c), is_first))
-            .unwrap_or((None, false));
-
-        Some(hint_char)
-    }
-}
-
-impl<'a> From<&'a HintState> for Hint<'a> {
-    fn from(hint_state: &'a HintState) -> Self {
-        let matches = HintMatches::new(hint_state.matches());
-        Self { labels: hint_state.labels(), matches }
-    }
-}
-
-/// Visible hint match tracking.
-#[derive(Default)]
-struct HintMatches<'a> {
-    /// All visible matches.
-    matches: Cow<'a, [Match]>,
-
-    /// Index of the last match checked.
-    index: usize,
-}
-
-impl<'a> HintMatches<'a> {
-    /// Create new renderable matches iterator..
-    fn new(matches: impl Into<Cow<'a, [Match]>>) -> Self {
-        Self { matches: matches.into(), index: 0 }
-    }
-
-    /// Advance the regex tracker to the next point.
-    ///
-    /// This will return `true` if the point passed is part of a regex match.
-    fn advance(&mut self, point: Point) -> bool {
-        while let Some(bounds) = self.get(self.index) {
-            if bounds.start() > &point {
-                break;
-            } else if bounds.end() < &point {
-                self.index += 1;
-            } else {
-                return true;
-            }
-        }
-        false
-    }
-}
-
-impl<'a> Deref for HintMatches<'a> {
-    type Target = [Match];
-
-    fn deref(&self) -> &Self::Target {
-        self.matches.deref()
     }
 }
