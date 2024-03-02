@@ -530,7 +530,6 @@ impl Display {
         &mut self,
         terminal: &mut Term<T>,
         pty_resize_handle: &mut dyn OnResize,
-        search_state: &mut SearchState,
         config: &UiConfig,
     ) where
         T: EventListener,
@@ -600,9 +599,6 @@ impl Display {
             // Queue renderer update.
             let renderer_update = self.pending_renderer_update.get_or_insert(Default::default());
             renderer_update.resize = true;
-
-            // Clear focused search match.
-            search_state.clear_focused_match();
         }
         self.size_info = new_size;
     }

@@ -162,7 +162,6 @@ pub struct ActionContext<'a, N, T> {
     pub modifiers: &'a mut Modifiers,
     pub display: &'a mut Display,
     pub config: &'a UiConfig,
-    pub cursor_blink_timed_out: &'a mut bool,
     pub event_loop: &'a EventLoopWindowTarget<Event>,
     pub event_proxy: &'a EventLoopProxy<Event>,
     pub scheduler: &'a mut Scheduler,
@@ -205,7 +204,6 @@ pub struct Mouse {
     pub last_click_timestamp: Instant,
     pub last_click_button: MouseButton,
     pub click_state: ClickState,
-    pub accumulated_scroll: AccumulatedScroll,
     pub cell_side: Side,
     pub lines_scrolled: f32,
     pub block_hint_launcher: bool,
@@ -229,7 +227,6 @@ impl Default for Mouse {
             block_hint_launcher: Default::default(),
             inside_text_area: Default::default(),
             lines_scrolled: Default::default(),
-            accumulated_scroll: Default::default(),
             x: Default::default(),
             y: Default::default(),
         }
@@ -239,16 +236,6 @@ impl Default for Mouse {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ClickState {
     None,
-}
-
-/// The amount of scroll accumulated from the pointer events.
-#[derive(Default, Debug)]
-pub struct AccumulatedScroll {
-    /// Scroll we should perform along `x` axis.
-    pub x: f64,
-
-    /// Scroll we should perform along `y` axis.
-    pub y: f64,
 }
 
 impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
@@ -435,11 +422,6 @@ impl Processor {
 
                     // Shutdown if no more terminals are open.
                     if self.windows.is_empty() {
-                        // Write ref tests of last window to disk.
-                        if self.config.debug.ref_test {
-                            window_context.write_ref_test_results();
-                        }
-
                         event_loop.exit();
                     }
                 },

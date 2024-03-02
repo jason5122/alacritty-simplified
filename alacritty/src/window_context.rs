@@ -42,7 +42,6 @@ pub struct WindowContext {
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
     terminal: Arc<FairMutex<Term<EventProxy>>>,
-    cursor_blink_timed_out: bool,
     modifiers: Modifiers,
     inline_search_state: InlineSearchState,
     search_state: SearchState,
@@ -184,7 +183,6 @@ impl WindowContext {
             shell_pid,
             config,
             notifier: Notifier(loop_tx),
-            cursor_blink_timed_out: Default::default(),
             inline_search_state: Default::default(),
             search_state: Default::default(),
             event_queue: Default::default(),
@@ -238,10 +236,7 @@ impl WindowContext {
 
         let mut terminal = self.terminal.lock();
 
-        let old_is_searching = self.search_state.history_index.is_some();
-
         let context = ActionContext {
-            cursor_blink_timed_out: &mut self.cursor_blink_timed_out,
             inline_search_state: &mut self.inline_search_state,
             search_state: &mut self.search_state,
             modifiers: &mut self.modifiers,
@@ -274,8 +269,6 @@ impl WindowContext {
                 &mut terminal,
                 &mut self.display,
                 &mut self.notifier,
-                &mut self.search_state,
-                old_is_searching,
                 &self.config,
             );
             self.dirty = true;
@@ -297,64 +290,14 @@ impl WindowContext {
         self.display.window.id()
     }
 
-    /// Write the ref test results to the disk.
-    pub fn write_ref_test_results(&self) {
-        // Dump grid state.
-        let mut grid = self.terminal.lock().grid().clone();
-        grid.initialize_all();
-        grid.truncate();
-
-        let serialized_grid = json::to_string(&grid).expect("serialize grid");
-
-        let size_info = &self.display.size_info;
-        let size = TermSize::new(size_info.columns(), size_info.screen_lines());
-        let serialized_size = json::to_string(&size).expect("serialize size");
-
-        let serialized_config = format!("{{\"history_size\":{}}}", grid.history_size());
-
-        File::create("./grid.json")
-            .and_then(|mut f| f.write_all(serialized_grid.as_bytes()))
-            .expect("write grid.json");
-
-        File::create("./size.json")
-            .and_then(|mut f| f.write_all(serialized_size.as_bytes()))
-            .expect("write size.json");
-
-        File::create("./config.json")
-            .and_then(|mut f| f.write_all(serialized_config.as_bytes()))
-            .expect("write config.json");
-    }
-
     /// Submit the pending changes to the `Display`.
     fn submit_display_update(
         terminal: &mut Term<EventProxy>,
         display: &mut Display,
         notifier: &mut Notifier,
-        search_state: &mut SearchState,
-        old_is_searching: bool,
         config: &UiConfig,
     ) {
-        // Compute cursor positions before resize.
-        let num_lines = terminal.screen_lines();
-        let cursor_at_bottom = terminal.grid().cursor.point.line + 1 == num_lines;
-        let origin_at_bottom = if terminal.mode().contains(TermMode::VI) {
-            terminal.vi_mode_cursor.point.line == num_lines - 1
-        } else {
-            search_state.direction == Direction::Left
-        };
-
-        display.handle_update(terminal, notifier, search_state, config);
-
-        let new_is_searching = search_state.history_index.is_some();
-        if !old_is_searching && new_is_searching {
-            // Scroll on search start to make sure origin is visible with minimal viewport motion.
-            let display_offset = terminal.grid().display_offset();
-            if display_offset == 0 && cursor_at_bottom && !origin_at_bottom {
-                terminal.scroll_display(Scroll::Delta(1));
-            } else if display_offset != 0 && origin_at_bottom {
-                terminal.scroll_display(Scroll::Delta(-1));
-            }
-        }
+        display.handle_update(terminal, notifier, config);
     }
 }
 
