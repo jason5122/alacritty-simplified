@@ -42,16 +42,14 @@ mod gl {
     include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
 }
 
-use crate::cli::Options;
+use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::event::{Event, Processor};
 #[cfg(target_os = "macos")]
 use crate::macos::locale;
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let options = Options::new();
-    alacritty(options)?;
-
+    alacritty()?;
     Ok(())
 }
 
@@ -59,7 +57,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 ///
 /// Creates a window, the terminal state, PTY, I/O event loop, input processor,
 /// config change monitor, and runs the main display loop.
-fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
+fn alacritty() -> Result<(), Box<dyn Error>> {
     // Setup winit event loop.
     let window_event_loop = WinitEventLoopBuilder::<Event>::with_user_event().build()?;
 
@@ -73,10 +71,10 @@ fn alacritty(options: Options) -> Result<(), Box<dyn Error>> {
     locale::set_locale_environment();
 
     // Event processor.
-    let window_options = options.window_options.clone();
     let mut processor = Processor::new(config, &window_event_loop);
 
     // Start event loop and block until shutdown.
+    let window_options = WindowOptions::default();
     let result = processor.run(window_event_loop, window_options);
 
     // This explicit drop is needed for Windows, ConPTY backend. Otherwise a deadlock can occur.

@@ -10,20 +10,8 @@ pub enum TextAction {
     Spacer,
     /// Terminate state reached.
     Terminate,
-    /// Yield a shortener.
-    Shortener,
     /// Yield a character.
     Char,
-}
-
-/// The direction which we should shorten.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub enum ShortenDirection {
-    /// Shorten to the start of the string.
-    Left,
-
-    /// Shorten to the end of the string.
-    Right,
 }
 
 /// Iterator that yield shortened version of the text.
@@ -31,7 +19,6 @@ pub struct StrShortener<'a> {
     chars: Skip<Chars<'a>>,
     accumulated_len: usize,
     max_width: usize,
-    direction: ShortenDirection,
     shortener: Option<char>,
     text_action: TextAction,
 }
@@ -48,17 +35,6 @@ impl<'a> Iterator for StrShortener<'a> {
             TextAction::Terminate => {
                 // We've reached the termination state.
                 None
-            },
-            TextAction::Shortener => {
-                // When we shorten from the left we yield the shortener first and process the rest.
-                self.text_action = if self.direction == ShortenDirection::Left {
-                    TextAction::Char
-                } else {
-                    TextAction::Terminate
-                };
-
-                // Consume the shortener to avoid yielding it later when shortening left.
-                self.shortener.take()
             },
             TextAction::Char => {
                 let ch = self.chars.next()?;

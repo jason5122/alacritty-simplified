@@ -73,17 +73,6 @@ pub struct Options {
     pub subcommands: Option<Subcommands>,
 }
 
-impl Options {
-    pub fn new() -> Self {
-        let mut options = Self::parse();
-
-        // Parse CLI config overrides.
-        options.config_options = options.window_options.config_overrides();
-
-        options
-    }
-}
-
 /// Parse the class CLI parameter.
 fn parse_class(input: &str) -> Result<Class, String> {
     let (general, instance) = match input.split_once(',') {
