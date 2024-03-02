@@ -28,7 +28,6 @@ use alacritty_terminal::grid::Dimensions as TermDimensions;
 use alacritty_terminal::index::Point;
 use alacritty_terminal::selection::Selection;
 use alacritty_terminal::term::{Term, TermMode, MIN_COLUMNS, MIN_SCREEN_LINES};
-use alacritty_terminal::vte::ansi::NamedColor;
 
 use crate::config::font::Font;
 use crate::config::window::Dimensions;
@@ -37,8 +36,6 @@ use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::bell::VisualBell;
 use crate::display::color::{List, Rgb};
-use crate::display::content::{RenderableCell, RenderableContent};
-use crate::display::cursor::IntoRects;
 use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
 use crate::display::meter::Meter;
@@ -686,36 +683,10 @@ impl Display {
     /// This call may block if vsync is enabled.
     pub fn draw<T: EventListener>(
         &mut self,
-        mut terminal: MutexGuard<'_, Term<T>>,
+        terminal: MutexGuard<'_, Term<T>>,
         scheduler: &mut Scheduler,
         config: &UiConfig,
     ) {
-        // Collect renderable content before the terminal is dropped.
-        let mut content = RenderableContent::new(config, self, &terminal);
-
-        // let mut i = 0;
-        let mut grid_cells: Vec<RenderableCell> = Vec::new();
-        for cell in &mut content {
-            // let custom_cell = RenderableCell {
-            //     character: 'A',
-            //     point: Point::new(1, Column(i)),
-            //     fg: cell.fg,
-            //     bg: cell.bg,
-            //     bg_alpha: 1.0,
-            //     underline: cell.underline,
-            //     flags: Flags::empty(),
-            //     extra: None,
-            // };
-            // println!("{:?}", custom_cell);
-            // grid_cells.push(custom_cell);
-
-            // i += 1;
-
-            grid_cells.push(cell);
-        }
-        let background_color = content.color(NamedColor::Background as usize);
-        let cursor = content.cursor();
-
         let metrics = self.glyph_cache.font_metrics();
         let size_info = self.size_info;
 
@@ -725,15 +696,11 @@ impl Display {
         // Make sure this window's OpenGL context is active.
         self.make_current();
 
-        self.renderer.clear(background_color, config.window_opacity());
+        self.renderer.clear(Rgb::new(24, 24, 24), config.window_opacity());
 
-        // Draw grid.
         // Ensure macOS hasn't reset our viewport.
         #[cfg(target_os = "macos")]
         self.renderer.set_viewport(&size_info);
-
-        // let glyph_cache = &mut self.glyph_cache;
-        // self.renderer.draw_cells(&size_info, glyph_cache, grid_cells.into_iter());
 
         let mut rects: Vec<RenderRect> = Vec::new();
         rects.push(RenderRect::new(10., 10., 100., 50., Rgb::new(255, 0, 0), 1.));
@@ -816,12 +783,6 @@ impl Display {
         dirty
     }
 
-    /// Returns `true` if damage information should be collected, `false` otherwise.
-    #[inline]
-    fn collect_damage(&self) -> bool {
-        matches!(self.raw_window_handle, RawWindowHandle::Wayland(_)) || self.damage_tracker.debug
-    }
-
     /// Request a new frame for a window on Wayland.
     fn request_frame(&mut self, scheduler: &mut Scheduler) {
         // Mark that we've used a frame.
@@ -881,11 +842,6 @@ impl Ime {
             // Clear state when disabling IME.
             *self = Default::default();
         }
-    }
-
-    #[inline]
-    pub fn is_enabled(&self) -> bool {
-        self.enabled
     }
 
     #[inline]

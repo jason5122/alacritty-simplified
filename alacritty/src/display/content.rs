@@ -2,19 +2,17 @@ use std::borrow::Cow;
 use std::ops::Deref;
 use std::{cmp, mem};
 
-use alacritty_terminal::event::EventListener;
 use alacritty_terminal::grid::{Dimensions, Indexed};
 use alacritty_terminal::index::{Column, Line, Point};
-use alacritty_terminal::selection::SelectionRange;
 use alacritty_terminal::term::cell::{Cell, Flags, Hyperlink};
 use alacritty_terminal::term::search::Match;
-use alacritty_terminal::term::{self, RenderableContent as TerminalContent, Term, TermMode};
+use alacritty_terminal::term::{self, RenderableContent as TerminalContent, TermMode};
 use alacritty_terminal::vte::ansi::{Color, CursorShape, NamedColor};
 
 use crate::config::UiConfig;
 use crate::display::color::{CellRgb, List, Rgb, DIM_FACTOR};
 use crate::display::hint::HintState;
-use crate::display::{Display, SizeInfo};
+use crate::display::SizeInfo;
 
 /// Minimum contrast between a fixed cursor color and the cell's background.
 pub const MIN_CURSOR_CONTRAST: f64 = 1.5;
@@ -36,47 +34,9 @@ pub struct RenderableContent<'a> {
 }
 
 impl<'a> RenderableContent<'a> {
-    pub fn new<T: EventListener>(
-        config: &'a UiConfig,
-        display: &'a mut Display,
-        term: &'a Term<T>,
-    ) -> Self {
-        let terminal_content = term.renderable_content();
-
-        Self {
-            colors: &display.colors,
-            size: &display.size_info,
-            cursor: RenderableCursor::new_hidden(),
-            terminal_content,
-            focused_match: None,
-            cursor_shape: CursorShape::Beam,
-            cursor_point: Point::new(2, Column(2)),
-            search: None,
-            config,
-            hint: None,
-        }
-    }
-
-    /// Viewport offset.
-    pub fn display_offset(&self) -> usize {
-        self.terminal_content.display_offset
-    }
-
-    /// Get the terminal cursor.
-    pub fn cursor(mut self) -> RenderableCursor {
-        // Assure this function is only called after the iterator has been drained.
-        debug_assert!(self.next().is_none());
-
-        self.cursor
-    }
-
     /// Get the RGB value for a color index.
     pub fn color(&self, color: usize) -> Rgb {
         self.terminal_content.colors[color].map(Rgb).unwrap_or(self.colors[color])
-    }
-
-    pub fn selection_range(&self) -> Option<SelectionRange> {
-        self.terminal_content.selection
     }
 
     /// Assemble the information required to render the terminal cursor.
@@ -369,17 +329,6 @@ pub struct RenderableCursor {
     text_color: Rgb,
     is_wide: bool,
     point: Point<usize>,
-}
-
-impl RenderableCursor {
-    fn new_hidden() -> Self {
-        let shape = CursorShape::Hidden;
-        let cursor_color = Rgb::default();
-        let text_color = Rgb::default();
-        let is_wide = false;
-        let point = Point::default();
-        Self { shape, cursor_color, text_color, is_wide, point }
-    }
 }
 
 impl RenderableCursor {
