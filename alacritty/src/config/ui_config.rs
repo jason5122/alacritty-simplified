@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use alacritty_config::SerdeReplace;
 use alacritty_terminal::term::Config as TermConfig;
+use alacritty_terminal::term::Osc52;
 use alacritty_terminal::tty::{Options as PtyOptions, Shell};
 use log::{error, warn};
 use serde::de::{Error as SerdeError, MapAccess, Visitor};
@@ -28,7 +29,6 @@ use crate::config::font::Font;
 use crate::config::mouse::{Mouse, MouseBindings};
 use crate::config::scrolling::Scrolling;
 use crate::config::selection::Selection;
-use crate::config::terminal::Terminal;
 use crate::config::window::WindowConfig;
 use crate::config::LOG_TARGET_CONFIG;
 
@@ -85,9 +85,6 @@ pub struct UiConfig {
     #[cfg(unix)]
     pub ipc_socket: bool,
 
-    /// Config for the alacritty_terminal itself.
-    pub terminal: Terminal,
-
     /// Path to a shell program to run on startup.
     pub shell: Option<Program>,
 
@@ -131,7 +128,6 @@ impl Default for UiConfig {
             scrolling: Default::default(),
             selection: Default::default(),
             keyboard: Default::default(),
-            terminal: Default::default(),
             import: Default::default(),
             cursor: Default::default(),
             window: Default::default(),
@@ -154,8 +150,8 @@ impl UiConfig {
             scrolling_history: self.scrolling.history() as usize,
             vi_mode_cursor_style: self.cursor.vi_mode_style(),
             default_cursor_style: self.cursor.style(),
-            osc52: self.terminal.osc52.0,
             kitty_keyboard: true,
+            osc52: Osc52::default(),
         }
     }
 
