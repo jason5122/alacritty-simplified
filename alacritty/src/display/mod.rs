@@ -18,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
-use unicode_width::UnicodeWidthChar;
 
 use alacritty_terminal::event::{EventListener, OnResize, WindowSize};
 use alacritty_terminal::grid::Dimensions as TermDimensions;
@@ -731,29 +730,11 @@ impl Drop for Display {
 /// Input method state.
 #[derive(Debug, Default)]
 pub struct Ime {
-    /// Whether the IME is enabled.
-    enabled: bool,
-
     /// Current IME preedit.
     preedit: Option<Preedit>,
 }
 
 impl Ime {
-    #[inline]
-    pub fn set_enabled(&mut self, is_enabled: bool) {
-        if is_enabled {
-            self.enabled = is_enabled
-        } else {
-            // Clear state when disabling IME.
-            *self = Default::default();
-        }
-    }
-
-    #[inline]
-    pub fn set_preedit(&mut self, preedit: Option<Preedit>) {
-        self.preedit = preedit;
-    }
-
     #[inline]
     pub fn preedit(&self) -> Option<&Preedit> {
         self.preedit.as_ref()
@@ -772,22 +753,6 @@ pub struct Preedit {
 
     /// The cursor offset from the end of the preedit in char width.
     cursor_end_offset: Option<usize>,
-}
-
-impl Preedit {
-    pub fn new(text: String, cursor_byte_offset: Option<usize>) -> Self {
-        let cursor_end_offset = if let Some(byte_offset) = cursor_byte_offset {
-            // Convert byte offset into char offset.
-            let cursor_end_offset =
-                text[byte_offset..].chars().fold(0, |acc, ch| acc + ch.width().unwrap_or(1));
-
-            Some(cursor_end_offset)
-        } else {
-            None
-        };
-
-        Self { text, cursor_byte_offset, cursor_end_offset }
-    }
 }
 
 /// Pending renderer updates.

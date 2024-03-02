@@ -8,7 +8,6 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 #[cfg(not(windows))]
 use std::os::unix::io::RawFd;
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
 use std::{env, f32, mem};
@@ -19,8 +18,8 @@ use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
 use log::{debug, info, warn};
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{
-    ElementState, Event as WinitEvent, Ime, Modifiers, MouseButton, StartCause,
-    Touch as TouchEvent, WindowEvent,
+    ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, Touch as TouchEvent,
+    WindowEvent,
 };
 use winit::event_loop::{
     ControlFlow, DeviceEvents, EventLoop, EventLoopProxy, EventLoopWindowTarget,
@@ -35,8 +34,6 @@ use alacritty_terminal::selection::{Selection, SelectionType};
 use alacritty_terminal::term::search::{Match, RegexSearch};
 use alacritty_terminal::term::{self, ClipboardType, Term, TermMode};
 
-#[cfg(unix)]
-use crate::cli::IpcConfig;
 use crate::cli::WindowOptions;
 use crate::clipboard::Clipboard;
 use crate::config::ui_config::{HintAction, HintInternalAction};
@@ -47,7 +44,7 @@ use crate::daemon::spawn_daemon;
 use crate::display::color::Rgb;
 use crate::display::hint::HintMatch;
 use crate::display::window::Window;
-use crate::display::{Display, Preedit, SizeInfo};
+use crate::display::{Display, SizeInfo};
 use crate::input::{self, ActionContext as _, FONT_SIZE_STEP};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 use crate::window_context::WindowContext;
@@ -92,8 +89,6 @@ pub enum EventType {
     Terminal(TerminalEvent),
     Scroll(Scroll),
     CreateWindow(WindowOptions),
-    BlinkCursor,
-    BlinkCursorTimeout,
     SearchNext,
     Frame,
 }
@@ -668,19 +663,6 @@ impl<'a, N: Notify + 'a, T: EventListener> input::ActionContext<T> for ActionCon
     /// All features are re-enabled again automatically.
     #[inline]
     fn on_typing_start(&mut self) {
-        // Disable cursor blinking.
-        let timer_id = TimerId::new(Topic::BlinkCursor, self.display.window.id());
-        if self.scheduler.unschedule(timer_id).is_some() {
-            self.schedule_blinking();
-
-            // Mark the cursor as visible and queue redraw if the cursor was hidden.
-            if mem::take(&mut self.display.cursor_hidden) {
-                *self.dirty = true;
-            }
-        } else if *self.cursor_blink_timed_out {
-            self.update_cursor_blinking();
-        }
-
         // Hide mouse cursor.
         if self.config.mouse.hide_when_typing {
             self.display.window.set_mouse_visible(false);
@@ -1015,59 +997,6 @@ impl<'a, N: Notify + 'a, T: EventListener> ActionContext<'a, N, T> {
         self.search_state.focused_match = None;
     }
 
-    /// Update the cursor blinking state.
-    fn update_cursor_blinking(&mut self) {
-        // Get config cursor style.
-        let mut cursor_style = self.config.cursor.style;
-        let vi_mode = self.terminal.mode().contains(TermMode::VI);
-        if vi_mode {
-            cursor_style = self.config.cursor.vi_mode_style.unwrap_or(cursor_style);
-        }
-
-        // Check terminal cursor style.
-        let terminal_blinking = self.terminal.cursor_style().blinking;
-        let mut blinking = cursor_style.blinking_override().unwrap_or(terminal_blinking);
-        blinking &= (vi_mode || self.terminal().mode().contains(TermMode::SHOW_CURSOR))
-            && self.display().ime.preedit().is_none();
-
-        // Update cursor blinking state.
-        let window_id = self.display.window.id();
-        self.scheduler.unschedule(TimerId::new(Topic::BlinkCursor, window_id));
-        self.scheduler.unschedule(TimerId::new(Topic::BlinkTimeout, window_id));
-
-        // Reset blinkinig timeout.
-        *self.cursor_blink_timed_out = false;
-
-        if blinking && self.terminal.is_focused {
-            self.schedule_blinking();
-            self.schedule_blinking_timeout();
-        } else {
-            self.display.cursor_hidden = false;
-            *self.dirty = true;
-        }
-    }
-
-    fn schedule_blinking(&mut self) {
-        let window_id = self.display.window.id();
-        let timer_id = TimerId::new(Topic::BlinkCursor, window_id);
-        let event = Event::new(EventType::BlinkCursor, window_id);
-        let blinking_interval = Duration::from_millis(self.config.cursor.blink_interval());
-        self.scheduler.schedule(event, blinking_interval, true, timer_id);
-    }
-
-    fn schedule_blinking_timeout(&mut self) {
-        let blinking_timeout = self.config.cursor.blink_timeout();
-        if blinking_timeout == Duration::ZERO {
-            return;
-        }
-
-        let window_id = self.display.window.id();
-        let event = Event::new(EventType::BlinkCursorTimeout, window_id);
-        let timer_id = TimerId::new(Topic::BlinkTimeout, window_id);
-
-        self.scheduler.schedule(event, blinking_timeout, false, timer_id);
-    }
-
     /// Perform vi mode inline search in the specified direction.
     fn inline_search(&mut self, direction: Direction) {
         let c = match self.inline_search_state.character {
@@ -1250,22 +1179,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
             WinitEvent::UserEvent(Event { payload, .. }) => match payload {
                 EventType::SearchNext => self.ctx.goto_match(None),
                 EventType::Scroll(scroll) => self.ctx.scroll(scroll),
-                EventType::BlinkCursor => {
-                    // Only change state when timeout isn't reached, since we could get
-                    // BlinkCursor and BlinkCursorTimeout events at the same time.
-                    if !*self.ctx.cursor_blink_timed_out {
-                        self.ctx.display.cursor_hidden ^= true;
-                        *self.ctx.dirty = true;
-                    }
-                },
-                EventType::BlinkCursorTimeout => {
-                    // Disable blinking after timeout reached.
-                    let timer_id = TimerId::new(Topic::BlinkCursor, self.ctx.display.window.id());
-                    self.ctx.scheduler.unschedule(timer_id);
-                    *self.ctx.cursor_blink_timed_out = true;
-                    self.ctx.display.cursor_hidden = false;
-                    *self.ctx.dirty = true;
-                },
                 EventType::Terminal(event) => match event {
                     TerminalEvent::Title(title) => {
                         if !self.ctx.preserve_title && self.ctx.config.window.dynamic_title {
@@ -1308,8 +1221,9 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                     },
                     TerminalEvent::PtyWrite(text) => self.ctx.write_to_pty(text.into_bytes()),
                     TerminalEvent::MouseCursorDirty => self.reset_mouse_cursor(),
-                    TerminalEvent::CursorBlinkingChange => self.ctx.update_cursor_blinking(),
-                    TerminalEvent::Exit | TerminalEvent::Wakeup => (),
+                    TerminalEvent::CursorBlinkingChange
+                    | TerminalEvent::Exit
+                    | TerminalEvent::Wakeup => (),
                 },
                 EventType::CreateWindow(_) | EventType::Frame => (),
             },
@@ -1369,7 +1283,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                             self.ctx.window().set_urgent(false);
                         }
 
-                        self.ctx.update_cursor_blinking();
                         self.on_focus_change(is_focused);
                     },
                     WindowEvent::Occluded(occluded) => {
@@ -1386,35 +1299,7 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                             *self.ctx.dirty = true;
                         }
                     },
-                    WindowEvent::Ime(ime) => match ime {
-                        Ime::Commit(text) => {
-                            *self.ctx.dirty = true;
-                            // Don't use bracketed paste for single char input.
-                            self.ctx.paste(&text, text.chars().count() > 1);
-                            self.ctx.update_cursor_blinking();
-                        },
-                        Ime::Preedit(text, cursor_offset) => {
-                            let preedit = if text.is_empty() {
-                                None
-                            } else {
-                                Some(Preedit::new(text, cursor_offset.map(|offset| offset.0)))
-                            };
-
-                            if self.ctx.display.ime.preedit() != preedit.as_ref() {
-                                self.ctx.display.ime.set_preedit(preedit);
-                                self.ctx.update_cursor_blinking();
-                                *self.ctx.dirty = true;
-                            }
-                        },
-                        Ime::Enabled => {
-                            self.ctx.display.ime.set_enabled(true);
-                            *self.ctx.dirty = true;
-                        },
-                        Ime::Disabled => {
-                            self.ctx.display.ime.set_enabled(false);
-                            *self.ctx.dirty = true;
-                        },
-                    },
+                    WindowEvent::Ime(_) => (),
                     WindowEvent::KeyboardInput { is_synthetic: true, .. }
                     | WindowEvent::ActivationTokenDone { .. }
                     | WindowEvent::TouchpadPressure { .. }

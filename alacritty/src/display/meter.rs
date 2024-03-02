@@ -47,10 +47,6 @@ pub struct Sampler<'a> {
 }
 
 impl<'a> Sampler<'a> {
-    fn new(meter: &'a mut Meter) -> Sampler<'a> {
-        Sampler { meter, created_at: Instant::now() }
-    }
-
     #[inline]
     fn alive_duration(&self) -> Duration {
         self.created_at.elapsed()

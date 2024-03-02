@@ -1,12 +1,9 @@
-use std::collections::HashMap;
 use std::mem;
 
-use ahash::RandomState;
 use crossfont::Metrics;
 use log::info;
 
 use alacritty_terminal::index::Point;
-use alacritty_terminal::term::cell::Flags;
 
 use crate::display::color::Rgb;
 use crate::display::SizeInfo;
@@ -52,9 +49,7 @@ pub enum RectKind {
 
 /// Lines for underline and strikeout.
 #[derive(Default)]
-pub struct RenderLines {
-    inner: HashMap<Flags, Vec<RenderLine>, RandomState>,
-}
+pub struct RenderLines {}
 
 /// Shader sources for rect rendering program.
 static RECT_SHADER_F: &str = include_str!("../../res/rect.f.glsl");

@@ -26,8 +26,6 @@ impl TimerId {
 pub enum Topic {
     SelectionScrolling,
     DelayedSearch,
-    BlinkCursor,
-    BlinkTimeout,
     Frame,
 }
 
