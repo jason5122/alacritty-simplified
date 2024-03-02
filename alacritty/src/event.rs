@@ -90,11 +90,8 @@ impl From<Event> for WinitEvent<Event> {
 #[derive(Debug, Clone)]
 pub enum EventType {
     Terminal(TerminalEvent),
-    ConfigReload(PathBuf),
     Scroll(Scroll),
     CreateWindow(WindowOptions),
-    #[cfg(unix)]
-    IpcConfig(IpcConfig),
     BlinkCursor,
     BlinkCursorTimeout,
     SearchNext,
@@ -1314,9 +1311,7 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                     TerminalEvent::CursorBlinkingChange => self.ctx.update_cursor_blinking(),
                     TerminalEvent::Exit | TerminalEvent::Wakeup => (),
                 },
-                #[cfg(unix)]
-                EventType::IpcConfig(_) => (),
-                EventType::ConfigReload(_) | EventType::CreateWindow(_) | EventType::Frame => (),
+                EventType::CreateWindow(_) | EventType::Frame => (),
             },
             WinitEvent::WindowEvent { event, .. } => {
                 match event {
