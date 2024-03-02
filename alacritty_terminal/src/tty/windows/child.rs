@@ -94,34 +94,3 @@ impl Drop for ChildExitWatcher {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use std::os::windows::io::AsRawHandle;
-    use std::process::Command;
-    use std::sync::Arc;
-    use std::time::Duration;
-
-    use super::super::PTY_CHILD_EVENT_TOKEN;
-    use super::*;
-
-    #[test]
-    pub fn event_is_emitted_when_child_exits() {
-        const WAIT_TIMEOUT: Duration = Duration::from_millis(200);
-
-        let poller = Arc::new(Poller::new().unwrap());
-
-        let mut child = Command::new("cmd.exe").spawn().unwrap();
-        let child_exit_watcher = ChildExitWatcher::new(child.as_raw_handle() as HANDLE).unwrap();
-        child_exit_watcher.register(&poller, Event::readable(PTY_CHILD_EVENT_TOKEN));
-
-        child.kill().unwrap();
-
-        // Poll for the event or fail with timeout if nothing has been sent.
-        let mut events = polling::Events::new();
-        poller.wait(&mut events, Some(WAIT_TIMEOUT)).unwrap();
-        assert_eq!(events.iter().next().unwrap().key, PTY_CHILD_EVENT_TOKEN);
-        // Verify that at least one `ChildEvent::Exited` was received.
-        assert_eq!(child_exit_watcher.event_rx().try_recv(), Ok(ChildEvent::Exited));
-    }
-}

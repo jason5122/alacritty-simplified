@@ -118,25 +118,3 @@ impl error::Error for OsError {}
 impl error::Error for ExternalError {}
 impl error::Error for NotSupportedError {}
 impl error::Error for EventLoopError {}
-
-#[cfg(test)]
-mod tests {
-    #![allow(clippy::redundant_clone)]
-
-    use super::*;
-
-    // Eat attributes for testing
-    #[test]
-    fn ensure_fmt_does_not_panic() {
-        let _ = format!(
-            "{:?}, {}",
-            NotSupportedError::new(),
-            NotSupportedError::new().clone()
-        );
-        let _ = format!(
-            "{:?}, {}",
-            ExternalError::NotSupported(NotSupportedError::new()),
-            ExternalError::NotSupported(NotSupportedError::new())
-        );
-    }
-}

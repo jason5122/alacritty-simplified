@@ -20,8 +20,6 @@ pub mod window;
 mod bindings;
 mod mouse;
 
-#[cfg(test)]
-pub use crate::config::bindings::Binding;
 pub use crate::config::bindings::{
     Action, BindingKey, BindingMode, MouseAction, SearchAction, ViAction,
 };

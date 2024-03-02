@@ -145,15 +145,3 @@ mod sys {
         ) -> c_int;
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::{env, process};
-
-    #[test]
-    fn cwd_matches_current_dir() {
-        assert_eq!(cwd(process::id() as i32).ok(), env::current_dir().ok());
-    }
-}

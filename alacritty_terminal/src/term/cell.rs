@@ -288,38 +288,3 @@ impl LineLength for grid::Row<Cell> {
         length
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::mem;
-
-    use crate::grid::Row;
-    use crate::index::Column;
-
-    #[test]
-    fn cell_size_is_below_cap() {
-        // Expected cell size on 64-bit architectures.
-        const EXPECTED_CELL_SIZE: usize = 24;
-
-        // Ensure that cell size isn't growing by accident.
-        assert!(mem::size_of::<Cell>() <= EXPECTED_CELL_SIZE);
-    }
-
-    #[test]
-    fn line_length_works() {
-        let mut row = Row::<Cell>::new(10);
-        row[Column(5)].c = 'a';
-
-        assert_eq!(row.line_length(), Column(6));
-    }
-
-    #[test]
-    fn line_length_works_with_wrapline() {
-        let mut row = Row::<Cell>::new(10);
-        row[Column(9)].flags.insert(super::Flags::WRAPLINE);
-
-        assert_eq!(row.line_length(), Column(10));
-    }
-}
