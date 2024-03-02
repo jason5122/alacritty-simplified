@@ -876,13 +876,6 @@ impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
         }
     }
 
-    /// Reset mouse cursor based on modifier and terminal state.
-    #[inline]
-    pub fn reset_mouse_cursor(&mut self) {
-        let mouse_state = self.cursor_state();
-        self.ctx.window().set_mouse_cursor(mouse_state);
-    }
-
     /// Modifier state change.
     pub fn modifiers_input(&mut self, modifiers: Modifiers) {
         *self.ctx.modifiers() = modifiers;

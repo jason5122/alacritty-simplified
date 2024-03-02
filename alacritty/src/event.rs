@@ -40,7 +40,6 @@ use crate::config::UiConfig;
 #[cfg(not(windows))]
 use crate::daemon::foreground_process_path;
 use crate::daemon::spawn_daemon;
-use crate::display::color::Rgb;
 use crate::display::hint::HintMatch;
 use crate::display::window::Window;
 use crate::display::{Display, SizeInfo};
@@ -1046,57 +1045,7 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
         match event {
-            WinitEvent::UserEvent(Event { payload, .. }) => match payload {
-                EventType::SearchNext => self.ctx.goto_match(None),
-                EventType::Scroll(scroll) => self.ctx.scroll(scroll),
-                EventType::Terminal(event) => match event {
-                    TerminalEvent::Title(title) => {
-                        if !self.ctx.preserve_title && self.ctx.config.window.dynamic_title {
-                            self.ctx.window().set_title(title);
-                        }
-                    },
-                    TerminalEvent::ResetTitle => {
-                        let window_config = &self.ctx.config.window;
-                        if window_config.dynamic_title {
-                            self.ctx.display.window.set_title(window_config.identity.title.clone());
-                        }
-                    },
-                    TerminalEvent::Bell => {
-                        // Set window urgency hint when window is not focused.
-                        let focused = self.ctx.terminal.is_focused;
-                        if !focused && self.ctx.terminal.mode().contains(TermMode::URGENCY_HINTS) {
-                            self.ctx.window().set_urgent(true);
-                        }
-                    },
-                    TerminalEvent::ClipboardStore(clipboard_type, content) => {
-                        if self.ctx.terminal.is_focused {
-                            self.ctx.clipboard.store(clipboard_type, content);
-                        }
-                    },
-                    TerminalEvent::ClipboardLoad(clipboard_type, format) => {
-                        if self.ctx.terminal.is_focused {
-                            let text = format(self.ctx.clipboard.load(clipboard_type).as_str());
-                            self.ctx.write_to_pty(text.into_bytes());
-                        }
-                    },
-                    TerminalEvent::ColorRequest(index, format) => {
-                        let color = self.ctx.terminal().colors()[index]
-                            .map(Rgb)
-                            .unwrap_or(self.ctx.display.colors[index]);
-                        self.ctx.write_to_pty(format(color.0).into_bytes());
-                    },
-                    TerminalEvent::TextAreaSizeRequest(format) => {
-                        let text = format(self.ctx.size_info().into());
-                        self.ctx.write_to_pty(text.into_bytes());
-                    },
-                    TerminalEvent::PtyWrite(text) => self.ctx.write_to_pty(text.into_bytes()),
-                    TerminalEvent::MouseCursorDirty => self.reset_mouse_cursor(),
-                    TerminalEvent::CursorBlinkingChange
-                    | TerminalEvent::Exit
-                    | TerminalEvent::Wakeup => (),
-                },
-                EventType::CreateWindow(_) | EventType::Frame => (),
-            },
+            WinitEvent::UserEvent(Event { payload: _, .. }) => (),
             WinitEvent::WindowEvent { event, .. } => {
                 match event {
                     WindowEvent::CloseRequested => self.ctx.terminal.exit(),

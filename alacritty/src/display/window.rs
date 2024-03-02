@@ -106,9 +106,6 @@ pub struct Window {
 
     window: WinitWindow,
 
-    /// Current window title.
-    title: String,
-
     is_x11: bool,
     current_mouse_cursor: CursorIcon,
     mouse_visible: bool,
@@ -189,7 +186,6 @@ impl Window {
 
         Ok(Self {
             requested_redraw: false,
-            title: identity.title,
             current_mouse_cursor,
             mouse_visible: true,
             has_frame: true,
@@ -217,13 +213,6 @@ impl Window {
     #[inline]
     pub fn set_visible(&self, visibility: bool) {
         self.window.set_visible(visibility);
-    }
-
-    /// Set the window title.
-    #[inline]
-    pub fn set_title(&mut self, title: String) {
-        self.title = title;
-        self.window.set_title(&self.title);
     }
 
     #[inline]
