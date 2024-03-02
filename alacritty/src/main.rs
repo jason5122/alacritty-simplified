@@ -23,7 +23,6 @@ use winit::platform::x11::EventLoopWindowTargetExtX11;
 use alacritty_terminal::tty;
 
 mod cli;
-mod clipboard;
 mod config;
 mod display;
 mod event;

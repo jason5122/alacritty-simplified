@@ -12,7 +12,6 @@ use std::{f32, mem};
 use ahash::RandomState;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
 use log::info;
-use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{
     ElementState, Event as WinitEvent, Modifiers, MouseButton, StartCause, WindowEvent,
 };
@@ -29,7 +28,6 @@ use alacritty_terminal::term::search::{Match, RegexSearch};
 use alacritty_terminal::term::Term;
 
 use crate::cli::WindowOptions;
-use crate::clipboard::Clipboard;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
@@ -159,7 +157,6 @@ impl Default for InlineSearchState {
 pub struct ActionContext<'a, N, T> {
     pub notifier: &'a mut N,
     pub terminal: &'a mut Term<T>,
-    pub clipboard: &'a mut Clipboard,
     pub mouse: &'a mut Mouse,
     pub touch: &'a mut TouchPurpose,
     pub modifiers: &'a mut Modifiers,
@@ -381,7 +378,6 @@ impl Processor {
         let initial_window_error_loop = &mut initial_window_error;
         // SAFETY: Since this takes a pointer to the winit event loop, it MUST be dropped first,
         // which is done by `move` into event loop.
-        let mut clipboard = unsafe { Clipboard::new(event_loop.raw_display_handle()) };
         let result = event_loop.run(move |event, event_loop| {
             // Ignore all events we do not care about.
             if Self::skip_event(&event) {
@@ -453,13 +449,7 @@ impl Processor {
                         None => return,
                     };
 
-                    window_context.handle_event(
-                        event_loop,
-                        &proxy,
-                        &mut clipboard,
-                        &mut scheduler,
-                        event,
-                    );
+                    window_context.handle_event(event_loop, &proxy, &mut scheduler, event);
 
                     window_context.draw(&mut scheduler);
                 },
@@ -470,7 +460,6 @@ impl Processor {
                         window_context.handle_event(
                             event_loop,
                             &proxy,
-                            &mut clipboard,
                             &mut scheduler,
                             WinitEvent::AboutToWait,
                         );
@@ -490,7 +479,6 @@ impl Processor {
                         window_context.handle_event(
                             event_loop,
                             &proxy,
-                            &mut clipboard,
                             &mut scheduler,
                             event.clone().into(),
                         );
@@ -500,13 +488,7 @@ impl Processor {
                 WinitEvent::WindowEvent { window_id, .. }
                 | WinitEvent::UserEvent(Event { window_id: Some(window_id), .. }) => {
                     if let Some(window_context) = self.windows.get_mut(&window_id) {
-                        window_context.handle_event(
-                            event_loop,
-                            &proxy,
-                            &mut clipboard,
-                            &mut scheduler,
-                            event,
-                        );
+                        window_context.handle_event(event_loop, &proxy, &mut scheduler, event);
                     }
                 },
                 _ => (),

@@ -27,7 +27,6 @@ use alacritty_terminal::term::{Term, TermMode};
 use alacritty_terminal::tty;
 
 use crate::cli::WindowOptions;
-use crate::clipboard::Clipboard;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
@@ -218,7 +217,6 @@ impl WindowContext {
         &mut self,
         event_loop: &EventLoopWindowTarget<Event>,
         event_proxy: &EventLoopProxy<Event>,
-        clipboard: &mut Clipboard,
         scheduler: &mut Scheduler,
         event: WinitEvent<Event>,
     ) {
@@ -262,7 +260,6 @@ impl WindowContext {
             config: &self.config,
             event_proxy,
             event_loop,
-            clipboard,
             scheduler,
         };
         let mut processor = input::Processor::new(context);
