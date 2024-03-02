@@ -513,14 +513,6 @@ impl Display {
     fn swap_buffers(&self) {
         #[allow(clippy::single_match)]
         let res = match (self.surface.deref(), &self.context.get()) {
-            #[cfg(not(any(target_os = "macos", windows)))]
-            (Surface::Egl(surface), PossiblyCurrentContext::Egl(context))
-                if matches!(self.raw_window_handle, RawWindowHandle::Wayland(_))
-                    && !self.damage_tracker.debug =>
-            {
-                let damage = self.damage_tracker.shape_frame_damage(self.size_info.into());
-                surface.swap_buffers_with_damage(context, &damage)
-            },
             (surface, context) => surface.swap_buffers(context),
         };
         if let Err(err) = res {
