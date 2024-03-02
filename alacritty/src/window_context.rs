@@ -227,13 +227,7 @@ impl WindowContext {
 
         // Redraw the window.
         let terminal = self.terminal.lock();
-        self.display.draw(
-            terminal,
-            scheduler,
-            &self.message_buffer,
-            &self.config,
-            &mut self.search_state,
-        );
+        self.display.draw(terminal, scheduler, &self.config);
     }
 
     /// Process events for this terminal window.

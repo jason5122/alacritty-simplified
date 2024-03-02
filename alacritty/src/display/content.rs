@@ -49,7 +49,7 @@ impl<'a> RenderableContent<'a> {
             cursor: RenderableCursor::new_hidden(),
             terminal_content,
             focused_match: None,
-            cursor_shape: CursorShape::Block,
+            cursor_shape: CursorShape::Beam,
             cursor_point: Point::new(2, Column(2)),
             search: None,
             config,

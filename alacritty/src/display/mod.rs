@@ -36,7 +36,7 @@ use crate::config::window::Dimensions;
 use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::bell::VisualBell;
-use crate::display::color::List;
+use crate::display::color::{List, Rgb};
 use crate::display::content::{RenderableCell, RenderableContent};
 use crate::display::cursor::IntoRects;
 use crate::display::damage::DamageTracker;
@@ -45,6 +45,7 @@ use crate::display::meter::Meter;
 use crate::display::window::Window;
 use crate::event::{Event, EventType, Mouse, SearchState};
 use crate::message_bar::MessageBuffer;
+use crate::renderer::rects::RenderRect;
 use crate::renderer::{self, GlyphCache, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 
@@ -687,9 +688,7 @@ impl Display {
         &mut self,
         mut terminal: MutexGuard<'_, Term<T>>,
         scheduler: &mut Scheduler,
-        message_buffer: &MessageBuffer,
         config: &UiConfig,
-        search_state: &mut SearchState,
     ) {
         // Collect renderable content before the terminal is dropped.
         let mut content = RenderableContent::new(config, self, &terminal);
@@ -729,20 +728,16 @@ impl Display {
         self.renderer.clear(background_color, config.window_opacity());
 
         // Draw grid.
-        {
-            // Ensure macOS hasn't reset our viewport.
-            #[cfg(target_os = "macos")]
-            self.renderer.set_viewport(&size_info);
+        // Ensure macOS hasn't reset our viewport.
+        #[cfg(target_os = "macos")]
+        self.renderer.set_viewport(&size_info);
 
-            let glyph_cache = &mut self.glyph_cache;
-            self.renderer.draw_cells(&size_info, glyph_cache, grid_cells.into_iter());
-        }
+        // let glyph_cache = &mut self.glyph_cache;
+        // self.renderer.draw_cells(&size_info, glyph_cache, grid_cells.into_iter());
 
-        let mut rects = Vec::new();
-
-        // Draw cursor.
-        rects.extend(cursor.rects(&size_info, config.cursor.thickness()));
-
+        let mut rects: Vec<RenderRect> = Vec::new();
+        rects.push(RenderRect::new(10., 10., 100., 50., Rgb::new(255, 0, 0), 1.));
+        rects.push(RenderRect::new(500., 200., 100., 50., Rgb::new(255, 255, 0), 1.));
         self.renderer.draw_rects(&size_info, &metrics, rects);
 
         // Notify winit that we're about to present.
