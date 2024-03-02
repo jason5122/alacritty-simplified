@@ -17,7 +17,7 @@ use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 use alacritty_terminal::term::TermMode;
 use alacritty_terminal::vi_mode::ViMotion;
 
-use crate::config::ui_config::{Hint, Program, StringVisitor};
+use crate::config::ui_config::{Program, StringVisitor};
 
 /// Describes a state and action to take in that state.
 ///
@@ -93,10 +93,6 @@ pub enum Action {
     /// Run given command.
     #[config(skip)]
     Command(Program),
-
-    /// Regex keyboard hints.
-    #[config(skip)]
-    Hint(Hint),
 
     /// Move vi mode cursor.
     #[config(skip)]

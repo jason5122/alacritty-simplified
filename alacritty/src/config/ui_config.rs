@@ -19,8 +19,7 @@ use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 use alacritty_terminal::term::search::RegexSearch;
 
 use crate::config::bindings::{
-    self, Action, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper,
-    MouseBinding,
+    self, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper, MouseBinding,
 };
 use crate::config::color::Colors;
 use crate::config::cursor::Cursor;
@@ -144,35 +143,6 @@ impl UiConfig {
     pub fn pty_config(&self) -> PtyOptions {
         let shell = self.shell.clone().map(Into::into);
         PtyOptions { shell, working_directory: self.working_directory.clone(), hold: false }
-    }
-
-    /// Generate key bindings for all keyboard hints.
-    pub fn generate_hint_bindings(&mut self) {
-        // Check which key bindings is most likely to be the user's configuration.
-        //
-        // Both will be non-empty due to the presence of the default keybindings.
-        let key_bindings = if let Some(key_bindings) = self.key_bindings.as_mut() {
-            &mut key_bindings.0
-        } else {
-            &mut self.keyboard.bindings.0
-        };
-
-        for hint in &self.hints.enabled {
-            let binding = match &hint.binding {
-                Some(binding) => binding,
-                None => continue,
-            };
-
-            let binding = KeyBinding {
-                trigger: binding.key.clone(),
-                mods: binding.mods.0,
-                mode: binding.mode.mode,
-                notmode: binding.mode.not_mode,
-                action: Action::Hint(hint.clone()),
-            };
-
-            key_bindings.push(binding);
-        }
     }
 
     #[inline]

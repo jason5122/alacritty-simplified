@@ -7,8 +7,6 @@ use alacritty_config_derive::ConfigDeserialize;
 pub struct Debug {
     pub log_level: LevelFilter,
 
-    pub print_events: bool,
-
     /// Keep the log file after quitting.
     pub persistent_logging: bool,
 
@@ -33,7 +31,6 @@ impl Default for Debug {
     fn default() -> Self {
         Self {
             log_level: LevelFilter::Warn,
-            print_events: Default::default(),
             persistent_logging: Default::default(),
             render_timer: Default::default(),
             highlight_damage: Default::default(),

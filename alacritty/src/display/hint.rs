@@ -53,11 +53,6 @@ impl HintState {
         self.hint.is_some()
     }
 
-    /// Start the hint selection process.
-    pub fn start(&mut self, hint: Hint) {
-        self.hint = Some(hint);
-    }
-
     /// Cancel the hint highlighting process.
     fn stop(&mut self) {
         self.matches.clear();

@@ -162,10 +162,6 @@ impl<T: EventListener> Execute<T> for Action {
         match self {
             Action::Esc(s) => ctx.paste(s, false),
             Action::Command(program) => ctx.spawn_daemon(program.program(), program.args()),
-            Action::Hint(hint) => {
-                ctx.display().hint_state.start(hint.clone());
-                ctx.mark_dirty();
-            },
             Action::ToggleViMode => {
                 ctx.on_typing_start();
                 ctx.toggle_vi_mode()

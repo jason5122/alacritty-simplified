@@ -1385,10 +1385,6 @@ impl Processor {
         // which is done by `move` into event loop.
         let mut clipboard = unsafe { Clipboard::new(event_loop.raw_display_handle()) };
         let result = event_loop.run(move |event, event_loop| {
-            if self.config.debug.print_events {
-                info!("winit event: {:?}", event);
-            }
-
             // Ignore all events we do not care about.
             if Self::skip_event(&event) {
                 return;

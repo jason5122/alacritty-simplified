@@ -23,16 +23,6 @@ pub struct Colors {
     footer_bar: BarColors,
 }
 
-impl Colors {
-    pub fn footer_bar_foreground(&self) -> Rgb {
-        self.footer_bar.foreground.unwrap_or(self.primary.background)
-    }
-
-    pub fn footer_bar_background(&self) -> Rgb {
-        self.footer_bar.background.unwrap_or(self.primary.foreground)
-    }
-}
-
 #[derive(ConfigDeserialize, Copy, Clone, Default, Debug, PartialEq, Eq)]
 pub struct LineIndicatorColors {
     pub foreground: Option<Rgb>,
