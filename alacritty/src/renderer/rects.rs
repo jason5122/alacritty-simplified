@@ -56,13 +56,6 @@ pub struct RenderLines {
     inner: HashMap<Flags, Vec<RenderLine>, RandomState>,
 }
 
-impl RenderLines {
-    #[inline]
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 /// Shader sources for rect rendering program.
 static RECT_SHADER_F: &str = include_str!("../../res/rect.f.glsl");
 static RECT_SHADER_V: &str = include_str!("../../res/rect.v.glsl");

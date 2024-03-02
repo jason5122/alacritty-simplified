@@ -10,14 +10,9 @@ use crossfont::Metrics;
 use glutin::context::{ContextApi, GlContext, PossiblyCurrentContext};
 use glutin::display::{GetGlDisplay, GlDisplay};
 use log::{debug, error, info, warn, LevelFilter};
-use unicode_width::UnicodeWidthChar;
-
-use alacritty_terminal::index::Point;
-use alacritty_terminal::term::cell::Flags;
 
 use crate::config::debug::RendererPreference;
 use crate::display::color::Rgb;
-use crate::display::content::RenderableCell;
 use crate::display::SizeInfo;
 use crate::gl;
 use crate::renderer::rects::{RectRenderer, RenderRect};
@@ -176,62 +171,6 @@ impl Renderer {
         }
 
         Ok(Self { text_renderer, rect_renderer })
-    }
-
-    pub fn draw_cells<I: Iterator<Item = RenderableCell>>(
-        &mut self,
-        size_info: &SizeInfo,
-        glyph_cache: &mut GlyphCache,
-        cells: I,
-    ) {
-        match &mut self.text_renderer {
-            TextRendererProvider::Gles2(renderer) => {
-                renderer.draw_cells(size_info, glyph_cache, cells)
-            },
-            TextRendererProvider::Glsl3(renderer) => {
-                renderer.draw_cells(size_info, glyph_cache, cells)
-            },
-        }
-    }
-
-    /// Draw a string in a variable location. Used for printing the render timer, warnings and
-    /// errors.
-    pub fn draw_string(
-        &mut self,
-        point: Point<usize>,
-        fg: Rgb,
-        bg: Rgb,
-        string_chars: impl Iterator<Item = char>,
-        size_info: &SizeInfo,
-        glyph_cache: &mut GlyphCache,
-    ) {
-        let mut skip_next = false;
-        let cells = string_chars.enumerate().filter_map(|(i, character)| {
-            if skip_next {
-                skip_next = false;
-                return None;
-            }
-
-            let mut flags = Flags::empty();
-            if character.width() == Some(2) {
-                flags.insert(Flags::WIDE_CHAR);
-                // Wide character is always followed by a spacer, so skip it.
-                skip_next = true;
-            }
-
-            Some(RenderableCell {
-                point: Point::new(point.line, point.column + i),
-                character,
-                extra: None,
-                flags: Flags::empty(),
-                bg_alpha: 1.0,
-                fg,
-                bg,
-                underline: fg,
-            })
-        });
-
-        self.draw_cells(size_info, glyph_cache, cells);
     }
 
     pub fn with_loader<F, T>(&mut self, func: F) -> T

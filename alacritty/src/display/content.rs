@@ -332,10 +332,6 @@ pub struct RenderableCursor {
 }
 
 impl RenderableCursor {
-    pub fn new(point: Point<usize>, shape: CursorShape, cursor_color: Rgb, is_wide: bool) -> Self {
-        Self { shape, cursor_color, text_color: cursor_color, is_wide, point }
-    }
-
     pub fn color(&self) -> Rgb {
         self.cursor_color
     }

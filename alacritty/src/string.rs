@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::iter::Skip;
 use std::str::Chars;
 
@@ -35,74 +34,6 @@ pub struct StrShortener<'a> {
     direction: ShortenDirection,
     shortener: Option<char>,
     text_action: TextAction,
-}
-
-impl<'a> StrShortener<'a> {
-    pub fn new(
-        text: &'a str,
-        max_width: usize,
-        direction: ShortenDirection,
-        mut shortener: Option<char>,
-    ) -> Self {
-        if text.is_empty() {
-            // If we don't have any text don't produce a shortener for it.
-            let _ = shortener.take();
-        }
-
-        if direction == ShortenDirection::Right {
-            return Self {
-                chars: text.chars().skip(0),
-                accumulated_len: 0,
-                text_action: TextAction::Char,
-                max_width,
-                direction,
-                shortener,
-            };
-        }
-
-        let mut offset = 0;
-        let mut current_len = 0;
-
-        let mut iter = text.chars().rev().enumerate();
-
-        while let Some((idx, ch)) = iter.next() {
-            let ch_width = ch.width().unwrap_or(1);
-            current_len += ch_width;
-
-            match current_len.cmp(&max_width) {
-                // We can only be here if we've faced wide character or we've already
-                // handled equality situation. Anyway, break.
-                Ordering::Greater => break,
-                Ordering::Equal => {
-                    if shortener.is_some() && iter.clone().next().is_some() {
-                        // We have one more character after, shortener will accumulate for
-                        // the `current_len`.
-                        break;
-                    } else {
-                        // The match is exact, consume shortener.
-                        let _ = shortener.take();
-                    }
-                },
-                Ordering::Less => (),
-            }
-
-            offset = idx + 1;
-        }
-
-        // Consume the iterator to count the number of characters in it.
-        let num_chars = iter.last().map_or(offset, |(idx, _)| idx + 1);
-        let skip_chars = num_chars - offset;
-
-        let text_action = if current_len < max_width || shortener.is_none() {
-            TextAction::Char
-        } else {
-            TextAction::Shortener
-        };
-
-        let chars = text.chars().skip(skip_chars);
-
-        Self { chars, accumulated_len: 0, text_action, max_width, direction, shortener }
-    }
 }
 
 impl<'a> Iterator for StrShortener<'a> {

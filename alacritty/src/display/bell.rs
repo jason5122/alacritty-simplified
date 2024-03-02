@@ -21,12 +21,6 @@ impl VisualBell {
         self.intensity_at_instant(now)
     }
 
-    /// Get the currently intensity of the visual bell. The bell's intensity
-    /// ramps down from 1.0 to 0.0 at a rate determined by the bell's duration.
-    pub fn intensity(&self) -> f64 {
-        self.intensity_at_instant(Instant::now())
-    }
-
     /// Check whether or not the visual bell has completed "ringing".
     pub fn completed(&mut self) -> bool {
         match self.start_time {

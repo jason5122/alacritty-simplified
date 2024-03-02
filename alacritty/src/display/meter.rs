@@ -64,16 +64,6 @@ impl<'a> Drop for Sampler<'a> {
 }
 
 impl Meter {
-    /// Get a sampler.
-    pub fn sampler(&mut self) -> Sampler<'_> {
-        Sampler::new(self)
-    }
-
-    /// Get the current average sample duration in microseconds.
-    pub fn average(&self) -> f64 {
-        self.avg
-    }
-
     /// Add a sample.
     ///
     /// Used by Sampler::drop.

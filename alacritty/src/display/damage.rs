@@ -103,10 +103,6 @@ struct RenderDamageIterator<'a> {
 }
 
 impl<'a> RenderDamageIterator<'a> {
-    pub fn new(damaged_lines: TermDamageIterator<'a>, size_info: &'a SizeInfo<u32>) -> Self {
-        Self { damaged_lines: damaged_lines.peekable(), size_info }
-    }
-
     #[inline]
     fn rect_for_line(&self, line_damage: LineDamageBounds) -> Rect {
         let size_info = &self.size_info;

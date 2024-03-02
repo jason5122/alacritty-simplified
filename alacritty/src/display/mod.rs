@@ -38,7 +38,6 @@ use crate::display::bell::VisualBell;
 use crate::display::color::{List, Rgb};
 use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
-use crate::display::meter::Meter;
 use crate::display::window::Window;
 use crate::event::{Event, EventType, Mouse, SearchState};
 use crate::message_bar::MessageBuffer;
@@ -363,7 +362,6 @@ pub struct Display {
     context: ManuallyDrop<Replaceable<PossiblyCurrentContext>>,
 
     glyph_cache: GlyphCache,
-    meter: Meter,
 }
 
 impl Display {
@@ -497,7 +495,6 @@ impl Display {
             hint_mouse_point: Default::default(),
             pending_update: Default::default(),
             cursor_hidden: Default::default(),
-            meter: Default::default(),
             ime: Default::default(),
         })
     }

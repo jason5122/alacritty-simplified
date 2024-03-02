@@ -144,11 +144,6 @@ impl SearchState {
         self.history_index.and_then(|index| self.history.get(index))
     }
 
-    /// Direction of the search from the search origin.
-    pub fn direction(&self) -> Direction {
-        self.direction
-    }
-
     /// Clear the focused match.
     pub fn clear_focused_match(&mut self) {
         self.focused_match = None;
