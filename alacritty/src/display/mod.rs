@@ -32,7 +32,7 @@ use crate::display::color::{List, Rgb};
 use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
 use crate::display::window::Window;
-use crate::event::{Event, EventType, SearchState};
+use crate::event::{Event, EventType};
 use crate::renderer::rects::RenderRect;
 use crate::renderer::{self, GlyphCache, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};

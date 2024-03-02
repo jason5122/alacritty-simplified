@@ -30,9 +30,7 @@ use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::event::{
-    ActionContext, Event, EventProxy, InlineSearchState, Mouse, SearchState, TouchPurpose,
-};
+use crate::event::{ActionContext, Event, EventProxy, Mouse, TouchPurpose};
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
 
@@ -42,14 +40,8 @@ pub struct WindowContext {
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
     terminal: Arc<FairMutex<Term<EventProxy>>>,
-    modifiers: Modifiers,
-    inline_search_state: InlineSearchState,
-    search_state: SearchState,
     notifier: Notifier,
-    mouse: Mouse,
-    touch: TouchPurpose,
     occluded: bool,
-    preserve_title: bool,
     #[cfg(not(windows))]
     master_fd: RawFd,
     #[cfg(not(windows))]
@@ -116,8 +108,6 @@ impl WindowContext {
         let mut pty_config = config.pty_config();
         options.terminal_options.override_pty_config(&mut pty_config);
 
-        let preserve_title = options.window_identity.title.is_some();
-
         info!(
             "PTY dimensions: {:?} x {:?}",
             display.size_info.screen_lines(),
@@ -174,7 +164,6 @@ impl WindowContext {
 
         // Create context for the Alacritty window.
         Ok(WindowContext {
-            preserve_title,
             terminal,
             display,
             #[cfg(not(windows))]
@@ -183,13 +172,8 @@ impl WindowContext {
             shell_pid,
             config,
             notifier: Notifier(loop_tx),
-            inline_search_state: Default::default(),
-            search_state: Default::default(),
             event_queue: Default::default(),
-            modifiers: Default::default(),
             occluded: Default::default(),
-            mouse: Default::default(),
-            touch: Default::default(),
             dirty: Default::default(),
         })
     }
@@ -237,13 +221,8 @@ impl WindowContext {
         let mut terminal = self.terminal.lock();
 
         let context = ActionContext {
-            inline_search_state: &mut self.inline_search_state,
-            search_state: &mut self.search_state,
-            modifiers: &mut self.modifiers,
             notifier: &mut self.notifier,
             display: &mut self.display,
-            mouse: &mut self.mouse,
-            touch: &mut self.touch,
             dirty: &mut self.dirty,
             occluded: &mut self.occluded,
             terminal: &mut terminal,
@@ -251,7 +230,6 @@ impl WindowContext {
             master_fd: self.master_fd,
             #[cfg(not(windows))]
             shell_pid: self.shell_pid,
-            preserve_title: self.preserve_title,
             config: &self.config,
             event_proxy,
             event_loop,

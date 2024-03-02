@@ -73,103 +73,16 @@ impl From<TerminalEvent> for EventType {
     }
 }
 
-/// Regex search state.
-pub struct SearchState {
-    /// Search direction.
-    pub direction: Direction,
-
-    /// Current position in the search history.
-    pub history_index: Option<usize>,
-
-    /// Change in display offset since the beginning of the search.
-    display_offset_delta: i32,
-
-    /// Search origin in viewport coordinates relative to original display offset.
-    origin: Point,
-
-    /// Focused match during active search.
-    focused_match: Option<Match>,
-
-    /// Search regex and history.
-    ///
-    /// During an active search, the first element is the user's current input.
-    ///
-    /// While going through history, the [`SearchState::history_index`] will point to the element
-    /// in history which is currently being previewed.
-    history: VecDeque<String>,
-
-    /// Compiled search automatons.
-    dfas: Option<RegexSearch>,
-}
-
-impl SearchState {
-    /// Search regex text if a search is active.
-    pub fn regex(&self) -> Option<&String> {
-        self.history_index.and_then(|index| self.history.get(index))
-    }
-
-    /// Clear the focused match.
-    pub fn clear_focused_match(&mut self) {
-        self.focused_match = None;
-    }
-
-    /// Search regex text if a search is active.
-    fn regex_mut(&mut self) -> Option<&mut String> {
-        self.history_index.and_then(move |index| self.history.get_mut(index))
-    }
-}
-
-impl Default for SearchState {
-    fn default() -> Self {
-        Self {
-            direction: Direction::Right,
-            display_offset_delta: Default::default(),
-            focused_match: Default::default(),
-            history_index: Default::default(),
-            history: Default::default(),
-            origin: Default::default(),
-            dfas: Default::default(),
-        }
-    }
-}
-
-/// Vi inline search state.
-pub struct InlineSearchState {
-    /// Whether inline search is currently waiting for search character input.
-    pub char_pending: bool,
-    pub character: Option<char>,
-
-    direction: Direction,
-    stop_short: bool,
-}
-
-impl Default for InlineSearchState {
-    fn default() -> Self {
-        Self {
-            direction: Direction::Right,
-            char_pending: Default::default(),
-            stop_short: Default::default(),
-            character: Default::default(),
-        }
-    }
-}
-
 pub struct ActionContext<'a, N, T> {
     pub notifier: &'a mut N,
     pub terminal: &'a mut Term<T>,
-    pub mouse: &'a mut Mouse,
-    pub touch: &'a mut TouchPurpose,
-    pub modifiers: &'a mut Modifiers,
     pub display: &'a mut Display,
     pub config: &'a UiConfig,
     pub event_loop: &'a EventLoopWindowTarget<Event>,
     pub event_proxy: &'a EventLoopProxy<Event>,
     pub scheduler: &'a mut Scheduler,
-    pub search_state: &'a mut SearchState,
-    pub inline_search_state: &'a mut InlineSearchState,
     pub dirty: &'a mut bool,
     pub occluded: &'a mut bool,
-    pub preserve_title: bool,
     #[cfg(not(windows))]
     pub master_fd: RawFd,
     #[cfg(not(windows))]
