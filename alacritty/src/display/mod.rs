@@ -30,7 +30,6 @@ use crate::config::window::Dimensions;
 #[cfg(not(windows))]
 use crate::config::window::StartupMode;
 use crate::config::UiConfig;
-use crate::display::bell::VisualBell;
 use crate::display::color::{List, Rgb};
 use crate::display::damage::DamageTracker;
 use crate::display::hint::{HintMatch, HintState};
@@ -46,7 +45,6 @@ pub mod cursor;
 pub mod hint;
 pub mod window;
 
-mod bell;
 mod damage;
 mod meter;
 
@@ -321,8 +319,6 @@ pub struct Display {
     /// UI cursor visibility for blinking.
     pub cursor_hidden: bool,
 
-    pub visual_bell: VisualBell,
-
     /// Mapped RGB values for each terminal color.
     pub colors: List,
 
@@ -469,7 +465,6 @@ impl Display {
 
         Ok(Self {
             context: ManuallyDrop::new(Replaceable::new(context)),
-            visual_bell: VisualBell::from(&config.bell),
             renderer: ManuallyDrop::new(renderer),
             surface: ManuallyDrop::new(surface),
             colors: List::from(&config.colors),

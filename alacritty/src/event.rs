@@ -1287,14 +1287,6 @@ impl input::Processor<EventProxy, ActionContext<'_, Notifier, EventProxy>> {
                         if !focused && self.ctx.terminal.mode().contains(TermMode::URGENCY_HINTS) {
                             self.ctx.window().set_urgent(true);
                         }
-
-                        // Ring visual bell.
-                        self.ctx.display.visual_bell.ring();
-
-                        // Execute bell command.
-                        if let Some(bell_command) = &self.ctx.config.bell.command {
-                            self.ctx.spawn_daemon(bell_command.program(), bell_command.args());
-                        }
                     },
                     TerminalEvent::ClipboardStore(clipboard_type, content) => {
                         if self.ctx.terminal.is_focused {

@@ -210,17 +210,6 @@ impl WindowContext {
         // Force the display to process any pending display update.
         self.display.process_renderer_update();
 
-        // Request immediate re-draw if visual bell animation is not finished yet.
-        if !self.display.visual_bell.completed() {
-            // We can get an OS redraw which bypasses alacritty's frame throttling, thus
-            // marking the window as dirty when we don't have frame yet.
-            if self.display.window.has_frame {
-                self.display.window.request_redraw();
-            } else {
-                self.dirty = true;
-            }
-        }
-
         // Redraw the window.
         let terminal = self.terminal.lock();
         self.display.draw(terminal, scheduler, &self.config);

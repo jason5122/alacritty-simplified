@@ -5,7 +5,6 @@ use serde_yaml::Error as YamlError;
 use toml::de::Error as TomlError;
 use toml::ser::Error as TomlSeError;
 
-pub mod bell;
 pub mod color;
 pub mod cursor;
 pub mod debug;

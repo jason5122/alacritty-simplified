@@ -17,7 +17,6 @@ use winit::keyboard::{Key, ModifiersState};
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 use alacritty_terminal::term::search::RegexSearch;
 
-use crate::config::bell::BellConfig;
 use crate::config::bindings::{
     self, Action, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper,
     MouseBinding,
@@ -71,9 +70,6 @@ pub struct UiConfig {
 
     /// Live config reload.
     pub live_config_reload: bool,
-
-    /// Bell configuration.
-    pub bell: BellConfig,
 
     /// RGB values for colors.
     pub colors: Colors,
@@ -145,7 +141,6 @@ impl Default for UiConfig {
             debug: Default::default(),
             hints: Default::default(),
             font: Default::default(),
-            bell: Default::default(),
             env: Default::default(),
         }
     }
