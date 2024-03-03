@@ -20,8 +20,6 @@ use winit::event_loop::EventLoopBuilder as WinitEventLoopBuilder;
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 use winit::platform::x11::EventLoopWindowTargetExtX11;
 
-use alacritty_terminal::tty;
-
 mod display;
 mod event;
 mod input;
@@ -53,9 +51,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 fn alacritty() -> Result<(), Box<dyn Error>> {
     // Setup winit event loop.
     let window_event_loop = WinitEventLoopBuilder::<Event>::with_user_event().build()?;
-
-    // Set tty environment variables.
-    tty::setup_env();
 
     // Set macOS locale.
     #[cfg(target_os = "macos")]

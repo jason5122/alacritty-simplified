@@ -1,7 +1,6 @@
 //! Terminal window context.
 
 use std::error::Error;
-use std::rc::Rc;
 
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 use glutin::platform::x11::X11GlConfigExt;

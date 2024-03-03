@@ -112,6 +112,7 @@ impl Window {
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
         x11_visual: Option<X11VisualInfo>,
     ) -> Result<Window> {
+        #[allow(unused_mut)]
         let mut window_builder = Window::get_platform_window(
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             x11_visual,

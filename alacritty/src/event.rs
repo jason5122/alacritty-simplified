@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use ahash::RandomState;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
@@ -324,17 +323,6 @@ impl Processor {
 pub struct EventProxy {
     proxy: EventLoopProxy<Event>,
     window_id: WindowId,
-}
-
-impl EventProxy {
-    pub fn new(proxy: EventLoopProxy<Event>, window_id: WindowId) -> Self {
-        Self { proxy, window_id }
-    }
-
-    /// Send an event to the event loop.
-    pub fn send_event(&self, event: EventType) {
-        let _ = self.proxy.send_event(Event::new(event, self.window_id));
-    }
 }
 
 impl EventListener for EventProxy {
