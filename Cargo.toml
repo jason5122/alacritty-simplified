@@ -2,7 +2,6 @@
 members = [
   "alacritty",
   "alacritty_terminal",
-  "alacritty_config",
 ]
 resolver = "2"
 

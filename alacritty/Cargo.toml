@@ -13,10 +13,6 @@ rust-version = "1.72.0"
 path = "../alacritty_terminal"
 version = "0.22.1-dev"
 
-[dependencies.alacritty_config]
-path = "../alacritty_config"
-version = "0.2.1-dev"
-
 [dependencies]
 ahash = { version = "0.8.6", features = ["no-rng"] }
 bitflags = "2.2.1"

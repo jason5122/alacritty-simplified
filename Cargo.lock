@@ -51,7 +51,6 @@ name = "alacritty"
 version = "0.14.0-dev"
 dependencies = [
  "ahash",
- "alacritty_config",
  "alacritty_terminal",
  "bitflags 2.4.1",
  "clap",
@@ -79,15 +78,6 @@ dependencies = [
  "windows-sys 0.48.0",
  "winit",
  "xdg",
-]
-
-[[package]]
-name = "alacritty_config"
-version = "0.2.1-dev"
-dependencies = [
- "log",
- "serde",
- "toml",
 ]
 
 [[package]]
