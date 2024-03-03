@@ -188,7 +188,6 @@ impl Window {
     #[cfg(not(any(target_os = "macos", windows)))]
     pub fn get_platform_window(
         identity: &Identity,
-        window_config: &WindowConfig,
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))] x11_visual: Option<
             X11VisualInfo,
         >,
@@ -206,7 +205,7 @@ impl Window {
 
         let builder = WindowBuilder::new()
             .with_name(&identity.class.general, &identity.class.instance)
-            .with_decorations(window_config.decorations != Decorations::None);
+            .with_decorations(true);
 
         #[cfg(feature = "x11")]
         let builder = builder.with_window_icon(Some(icon));
