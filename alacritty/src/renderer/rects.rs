@@ -2,7 +2,7 @@ use std::mem;
 
 use log::info;
 
-use crate::display::color::Rgb;
+use crate::display::Rgb;
 use crate::display::SizeInfo;
 use crate::gl;
 use crate::gl::types::*;

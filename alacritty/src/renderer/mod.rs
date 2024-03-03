@@ -10,7 +10,7 @@ use glutin::context::PossiblyCurrentContext;
 use glutin::display::{GetGlDisplay, GlDisplay};
 use log::{debug, error, info, warn, LevelFilter};
 
-use crate::display::color::Rgb;
+use crate::display::Rgb;
 use crate::display::SizeInfo;
 use crate::gl;
 use crate::renderer::rects::{RectRenderer, RenderRect};

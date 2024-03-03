@@ -18,15 +18,32 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self};
 
-use crate::display::color::Rgb;
 use crate::display::window::Window;
 use crate::event::{Event, EventType};
 use crate::renderer::rects::RenderRect;
 use crate::renderer::{self, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 
-pub mod color;
 pub mod window;
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
+pub struct Rgb {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
+impl Rgb {
+    #[inline]
+    pub const fn new(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b }
+    }
+
+    #[inline]
+    pub fn as_tuple(self) -> (u8, u8, u8) {
+        (self.r, self.g, self.b)
+    }
+}
 
 #[derive(Debug)]
 pub enum Error {
