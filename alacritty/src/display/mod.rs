@@ -18,7 +18,6 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 
-use crate::config::debug::RendererPreference;
 use crate::config::font::Font;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
@@ -200,7 +199,7 @@ impl Display {
         let context = gl_context.make_current(&surface)?;
 
         // Create renderer.
-        let mut renderer = Renderer::new(&context, Some(RendererPreference::Glsl3))?;
+        let mut renderer = Renderer::new(&context)?;
 
         let viewport_size = window.inner_size();
 

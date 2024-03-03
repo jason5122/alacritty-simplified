@@ -21,7 +21,6 @@ use crate::config::bindings::{
 };
 use crate::config::color::Colors;
 use crate::config::cursor::Cursor;
-use crate::config::debug::Debug;
 use crate::config::font::Font;
 use crate::config::mouse::Mouse;
 use crate::config::selection::Selection;

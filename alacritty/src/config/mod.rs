@@ -7,7 +7,6 @@ use toml::ser::Error as TomlSeError;
 
 pub mod color;
 pub mod cursor;
-pub mod debug;
 pub mod font;
 pub mod selection;
 pub mod ui_config;
