@@ -142,7 +142,7 @@ impl RectRenderer {
         Ok(Self { vao, vbo, programs, vertices: Default::default() })
     }
 
-    pub fn draw(&mut self, size_info: &SizeInfo, metrics: &Metrics, rects: Vec<RenderRect>) {
+    pub fn draw(&mut self, size_info: &SizeInfo, rects: Vec<RenderRect>) {
         unsafe {
             // Bind VAO to enable vertex attribute slots.
             gl::BindVertexArray(self.vao);
@@ -171,7 +171,6 @@ impl RectRenderer {
 
                 let program = &self.programs[rect_kind as usize];
                 gl::UseProgram(program.id());
-                program.update_uniforms(size_info, metrics);
 
                 // Upload accumulated undercurl vertices.
                 gl::BufferData(
@@ -284,38 +283,5 @@ impl RectShaderProgram {
 
     fn id(&self) -> GLuint {
         self.program.id()
-    }
-
-    pub fn update_uniforms(&self, size_info: &SizeInfo, metrics: &Metrics) {
-        let position = (0.5 * metrics.descent).abs();
-        let underline_position = metrics.descent.abs() - metrics.underline_position.abs();
-
-        let viewport_height = size_info.height() - size_info.padding_y();
-        let padding_y = viewport_height
-            - (viewport_height / size_info.cell_height()).floor() * size_info.cell_height();
-
-        unsafe {
-            if let Some(u_cell_width) = self.u_cell_width {
-                gl::Uniform1f(u_cell_width, size_info.cell_width());
-            }
-            if let Some(u_cell_height) = self.u_cell_height {
-                gl::Uniform1f(u_cell_height, size_info.cell_height());
-            }
-            if let Some(u_padding_y) = self.u_padding_y {
-                gl::Uniform1f(u_padding_y, padding_y);
-            }
-            if let Some(u_padding_x) = self.u_padding_x {
-                gl::Uniform1f(u_padding_x, size_info.padding_x());
-            }
-            if let Some(u_underline_position) = self.u_underline_position {
-                gl::Uniform1f(u_underline_position, underline_position);
-            }
-            if let Some(u_underline_thickness) = self.u_underline_thickness {
-                gl::Uniform1f(u_underline_thickness, metrics.underline_thickness);
-            }
-            if let Some(u_undercurl_position) = self.u_undercurl_position {
-                gl::Uniform1f(u_undercurl_position, position);
-            }
-        }
     }
 }

@@ -21,12 +21,8 @@ use crate::renderer::shader::ShaderError;
 pub mod platform;
 pub mod rects;
 mod shader;
-mod text;
-
-pub use text::{GlyphCache, LoaderApi};
 
 use shader::ShaderVersion;
-use text::{Gles2Renderer, Glsl3Renderer, TextRenderer};
 
 macro_rules! cstr {
     ($s:literal) => {
@@ -80,12 +76,6 @@ impl From<String> for Error {
     fn from(val: String) -> Self {
         Error::Other(val)
     }
-}
-
-#[derive(Debug)]
-enum TextRendererProvider {
-    Gles2(Gles2Renderer),
-    Glsl3(Glsl3Renderer),
 }
 
 #[derive(Debug)]
@@ -168,7 +158,7 @@ impl Renderer {
     }
 
     /// Draw all rectangles simultaneously to prevent excessive program swaps.
-    pub fn draw_rects(&mut self, size_info: &SizeInfo, metrics: &Metrics, rects: Vec<RenderRect>) {
+    pub fn draw_rects(&mut self, size_info: &SizeInfo, rects: Vec<RenderRect>) {
         if rects.is_empty() {
             return;
         }
@@ -180,7 +170,7 @@ impl Renderer {
             gl::BlendFuncSeparate(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA, gl::SRC_ALPHA, gl::ONE);
         }
 
-        self.rect_renderer.draw(size_info, metrics, rects);
+        self.rect_renderer.draw(size_info, rects);
 
         // Activate regular state again.
         unsafe {
@@ -215,12 +205,7 @@ impl Renderer {
     #[inline]
     pub fn set_viewport(&self, size: &SizeInfo) {
         unsafe {
-            gl::Viewport(
-                size.padding_x() as i32,
-                size.padding_y() as i32,
-                size.width() as i32 - 2 * size.padding_x() as i32,
-                size.height() as i32 - 2 * size.padding_y() as i32,
-            );
+            gl::Viewport(0 as i32, 0 as i32, size.width() as i32, size.height() as i32);
         }
     }
 }

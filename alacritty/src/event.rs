@@ -66,8 +66,7 @@ impl From<TerminalEvent> for EventType {
     }
 }
 
-pub struct ActionContext<'a, T> {
-    pub terminal: &'a mut Term<T>,
+pub struct ActionContext<'a> {
     pub display: &'a mut Display,
     pub config: &'a UiConfig,
     pub event_loop: &'a EventLoopWindowTarget<Event>,
@@ -75,27 +74,22 @@ pub struct ActionContext<'a, T> {
     pub scheduler: &'a mut Scheduler,
     pub dirty: &'a mut bool,
     pub occluded: &'a mut bool,
-    #[cfg(not(windows))]
-    pub master_fd: RawFd,
-    #[cfg(not(windows))]
-    pub shell_pid: u32,
 }
 
-impl<'a, T: EventListener> input::ActionContext<T> for ActionContext<'a, T> {
+impl<'a, T: EventListener> input::ActionContext<T> for ActionContext<'a> {
     #[inline]
     fn window(&mut self) -> &mut Window {
         &mut self.display.window
     }
 }
 
-impl input::Processor<EventProxy, ActionContext<'_, EventProxy>> {
+impl input::Processor<EventProxy, ActionContext<'_>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
         match event {
             WinitEvent::UserEvent(Event { payload: _, .. }) => (),
             WinitEvent::WindowEvent { event, .. } => {
                 match event {
-                    WindowEvent::CloseRequested => self.ctx.terminal.exit(),
                     WindowEvent::Resized(size) => {
                         // Ignore resize events to zero in any dimension, to avoid issues with Winit
                         // and the ConPTY. A 0x0 resize will also occur when the window is minimized
@@ -126,6 +120,7 @@ impl input::Processor<EventProxy, ActionContext<'_, EventProxy>> {
                     | WindowEvent::ThemeChanged(_)
                     | WindowEvent::HoveredFile(_)
                     | WindowEvent::RedrawRequested
+                    | WindowEvent::CloseRequested
                     | WindowEvent::Moved(_)
                     | WindowEvent::Touch(_)
                     | WindowEvent::Focused(_)

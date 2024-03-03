@@ -31,12 +31,7 @@ pub struct WindowContext {
     pub display: Display,
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
-    terminal: Arc<FairMutex<Term<EventProxy>>>,
     occluded: bool,
-    #[cfg(not(windows))]
-    master_fd: RawFd,
-    #[cfg(not(windows))]
-    shell_pid: u32,
     config: Rc<UiConfig>,
 }
 
@@ -95,58 +90,8 @@ impl WindowContext {
         config: Rc<UiConfig>,
         proxy: EventLoopProxy<Event>,
     ) -> Result<Self, Box<dyn Error>> {
-        let event_proxy = EventProxy::new(proxy, display.window.id());
-
-        // Create the terminal.
-        //
-        // This object contains all of the state about what's being displayed. It's
-        // wrapped in a clonable mutex since both the I/O loop and display need to
-        // access it.
-        let terminal = Term::new(config.term_options(), &display.size_info, event_proxy.clone());
-        let terminal = Arc::new(FairMutex::new(terminal));
-
-        // Create the PTY.
-        //
-        // The PTY forks a process to run the shell on the slave side of the
-        // pseudoterminal. A file descriptor for the master side is retained for
-        // reading/writing to the shell.
-        let mut pty_config = config.pty_config();
-        let pty = tty::new(&pty_config, display.size_info.into(), display.window.id().into())?;
-
-        #[cfg(not(windows))]
-        let master_fd = pty.file().as_raw_fd();
-        #[cfg(not(windows))]
-        let shell_pid = pty.child().id();
-
-        // Create the pseudoterminal I/O loop.
-        //
-        // PTY I/O is ran on another thread as to not occupy cycles used by the
-        // renderer and input processing. Note that access to the terminal state is
-        // synchronized since the I/O loop updates the state, and the display
-        // consumes it periodically.
-        let event_loop = PtyEventLoop::new(
-            Arc::clone(&terminal),
-            event_proxy.clone(),
-            pty,
-            pty_config.hold,
-            config.debug.ref_test,
-        )?;
-
-        // The event loop channel allows write requests from the event processor
-        // to be sent to the pty loop and ultimately written to the pty.
-        let loop_tx = event_loop.channel();
-
-        // Kick off the I/O thread.
-        let _io_thread = event_loop.spawn();
-
-        // Create context for the Alacritty window.
         Ok(WindowContext {
-            terminal,
             display,
-            #[cfg(not(windows))]
-            master_fd,
-            #[cfg(not(windows))]
-            shell_pid,
             config,
             event_queue: Default::default(),
             occluded: Default::default(),
@@ -194,17 +139,10 @@ impl WindowContext {
             },
         }
 
-        let mut terminal = self.terminal.lock();
-
         let context = ActionContext {
             display: &mut self.display,
             dirty: &mut self.dirty,
             occluded: &mut self.occluded,
-            terminal: &mut terminal,
-            #[cfg(not(windows))]
-            master_fd: self.master_fd,
-            #[cfg(not(windows))]
-            shell_pid: self.shell_pid,
             config: &self.config,
             event_proxy,
             event_loop,
