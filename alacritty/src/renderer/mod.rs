@@ -6,7 +6,7 @@ use std::sync::OnceLock;
 use std::{fmt, ptr};
 
 use ahash::RandomState;
-use glutin::context::{ContextApi, GlContext, PossiblyCurrentContext};
+use glutin::context::PossiblyCurrentContext;
 use glutin::display::{GetGlDisplay, GlDisplay};
 use log::{debug, error, info, warn, LevelFilter};
 
@@ -115,10 +115,7 @@ impl Renderer {
         info!("Running on {renderer}");
         info!("OpenGL version {gl_version}, shader_version {shader_version}");
 
-        let is_gles_context = matches!(context.context_api(), ContextApi::Gles(_));
-
-        let (use_glsl3, allow_dsb) = (true, true);
-
+        let use_glsl3 = true;
         let rect_renderer = if use_glsl3 {
             RectRenderer::new(ShaderVersion::Glsl3)?
         } else {

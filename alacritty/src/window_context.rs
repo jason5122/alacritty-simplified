@@ -31,7 +31,6 @@ impl WindowContext {
     /// Create initial window context that does bootstrapping the graphics API we're going to use.
     pub fn initial(
         event_loop: &EventLoopWindowTarget<Event>,
-        proxy: EventLoopProxy<Event>,
         config: Rc<UiConfig>,
         options: WindowOptions,
     ) -> Result<Self, Box<dyn Error>> {
@@ -54,7 +53,6 @@ impl WindowContext {
         #[cfg(not(windows))]
         let window = Window::new(
             event_loop,
-            &config,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             gl_config.x11_visual(),
             #[cfg(target_os = "macos")]
@@ -67,15 +65,11 @@ impl WindowContext {
 
         let display = Display::new(window, gl_context, &config, false)?;
 
-        Self::new(display, config, proxy)
+        Self::new(display, config)
     }
 
     /// Create a new terminal window context.
-    fn new(
-        display: Display,
-        config: Rc<UiConfig>,
-        proxy: EventLoopProxy<Event>,
-    ) -> Result<Self, Box<dyn Error>> {
+    fn new(display: Display, config: Rc<UiConfig>) -> Result<Self, Box<dyn Error>> {
         Ok(WindowContext {
             display,
             config,
@@ -98,7 +92,7 @@ impl WindowContext {
         // Force the display to process any pending display update.
         self.display.process_renderer_update();
 
-        self.display.draw(scheduler, &self.config);
+        self.display.draw(scheduler);
     }
 
     /// Process events for this terminal window.
@@ -142,7 +136,7 @@ impl WindowContext {
 
         // Process DisplayUpdate events.
         if self.display.pending_update.dirty {
-            Self::submit_display_update(&mut self.display, &self.config);
+            Self::submit_display_update(&mut self.display);
             self.dirty = true;
         }
 
@@ -163,7 +157,7 @@ impl WindowContext {
     }
 
     /// Submit the pending changes to the `Display`.
-    fn submit_display_update(display: &mut Display, config: &UiConfig) {
-        display.handle_update(config);
+    fn submit_display_update(display: &mut Display) {
+        display.handle_update();
     }
 }

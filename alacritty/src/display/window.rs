@@ -27,18 +27,16 @@ use {
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
-use winit::dpi::{PhysicalPosition, PhysicalSize};
+use winit::dpi::PhysicalSize;
 use winit::event_loop::EventLoopWindowTarget;
 use winit::monitor::MonitorHandle;
 #[cfg(windows)]
 use winit::platform::windows::IconExtWindows;
 use winit::window::{
-    CursorIcon, Fullscreen, ImePurpose, Theme as WinitTheme, Window as WinitWindow, WindowBuilder,
-    WindowId,
+    CursorIcon, Theme as WinitTheme, Window as WinitWindow, WindowBuilder, WindowId,
 };
 
-use crate::config::window::{Decorations, Identity, StartupMode, WindowConfig};
-use crate::config::UiConfig;
+use crate::config::window::Identity;
 
 /// Window icon for `_NET_WM_ICON` property.
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
@@ -113,7 +111,6 @@ impl Window {
     /// This creates a window and fully initializes a window.
     pub fn new<E>(
         event_loop: &EventLoopWindowTarget<E>,
-        config: &UiConfig,
         #[rustfmt::skip]
         #[cfg(target_os = "macos")]
         tabbing_id: &Option<String>,
@@ -122,7 +119,7 @@ impl Window {
         x11_visual: Option<X11VisualInfo>,
     ) -> Result<Window> {
         let identity = Identity::default();
-        let mut window_builder = Window::get_platform_window(
+        let window_builder = Window::get_platform_window(
             &identity,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             x11_visual,

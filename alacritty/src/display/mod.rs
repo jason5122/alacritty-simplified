@@ -16,7 +16,7 @@ use raw_window_handle::RawWindowHandle;
 use serde::{Deserialize, Serialize};
 use winit::dpi::PhysicalSize;
 
-use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
+use crossfont::{self};
 
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
@@ -183,9 +183,6 @@ impl Display {
     ) -> Result<Display, Error> {
         let raw_window_handle = window.raw_window_handle();
 
-        let scale_factor = window.scale_factor as f32;
-        let rasterizer = Rasterizer::new()?;
-
         // Create the GL surface to draw into.
         let surface = renderer::platform::create_gl_surface(
             &gl_context,
@@ -193,11 +190,9 @@ impl Display {
             window.raw_window_handle(),
         )?;
 
-        // Make the context current.
         let context = gl_context.make_current(&surface)?;
 
-        // Create renderer.
-        let mut renderer = Renderer::new(&context)?;
+        let renderer = Renderer::new(&context)?;
 
         let viewport_size = window.inner_size();
 
@@ -263,7 +258,7 @@ impl Display {
     // performed in [`Self::process_renderer_update`] right before drawing.
     //
     /// Process update events.
-    pub fn handle_update(&mut self, config: &UiConfig) {
+    pub fn handle_update(&mut self) {
         let pending_update = mem::take(&mut self.pending_update);
 
         let (mut width, mut height) = (self.size_info.width(), self.size_info.height());
@@ -310,7 +305,7 @@ impl Display {
     /// A reference to Term whose state is being drawn must be provided.
     ///
     /// This call may block if vsync is enabled.
-    pub fn draw(&mut self, scheduler: &mut Scheduler, config: &UiConfig) {
+    pub fn draw(&mut self, scheduler: &mut Scheduler) {
         let size_info = self.size_info;
 
         // Make sure this window's OpenGL context is active.

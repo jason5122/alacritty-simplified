@@ -3,9 +3,7 @@ use std::fmt::{self, Formatter};
 use serde::de::{self, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer, Serialize};
 
-#[cfg(target_os = "macos")]
-use winit::platform::macos::OptionAsAlt as WinitOptionAsAlt;
-use winit::window::{Fullscreen, Theme as WinitTheme};
+use winit::window::Theme as WinitTheme;
 
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 
@@ -79,56 +77,6 @@ impl Default for WindowConfig {
             decorations_theme_variant: Default::default(),
             option_as_alt: Default::default(),
         }
-    }
-}
-
-impl WindowConfig {
-    #[inline]
-    pub fn dimensions(&self) -> Option<Dimensions> {
-        let (lines, columns) = (self.dimensions.lines, self.dimensions.columns);
-        let (lines_is_non_zero, columns_is_non_zero) = (lines != 0, columns != 0);
-
-        if lines_is_non_zero && columns_is_non_zero {
-            // Return dimensions if both `lines` and `columns` are non-zero.
-            Some(self.dimensions)
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    pub fn padding(&self, scale_factor: f32) -> (f32, f32) {
-        let padding_x = (f32::from(self.padding.x) * scale_factor).floor();
-        let padding_y = (f32::from(self.padding.y) * scale_factor).floor();
-        (padding_x, padding_y)
-    }
-
-    #[inline]
-    pub fn fullscreen(&self) -> Option<Fullscreen> {
-        if self.startup_mode == StartupMode::Fullscreen {
-            Some(Fullscreen::Borderless(None))
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    pub fn maximized(&self) -> bool {
-        self.startup_mode == StartupMode::Maximized
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn option_as_alt(&self) -> WinitOptionAsAlt {
-        match self.option_as_alt {
-            OptionAsAlt::OnlyLeft => WinitOptionAsAlt::OnlyLeft,
-            OptionAsAlt::OnlyRight => WinitOptionAsAlt::OnlyRight,
-            OptionAsAlt::Both => WinitOptionAsAlt::Both,
-            OptionAsAlt::None => WinitOptionAsAlt::None,
-        }
-    }
-
-    pub fn theme(&self) -> Option<WinitTheme> {
-        self.decorations_theme_variant.map(WinitTheme::from)
     }
 }
 

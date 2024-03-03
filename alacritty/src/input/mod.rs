@@ -17,10 +17,6 @@ pub trait ActionContext<T: EventListener> {
     fn window(&mut self) -> &mut Window;
 }
 
-trait Execute<T: EventListener> {
-    fn execute<A: ActionContext<T>>(&self, ctx: &mut A);
-}
-
 impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
     pub fn new(ctx: A) -> Self {
         Self { ctx, _phantom: Default::default() }

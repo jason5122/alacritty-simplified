@@ -1,23 +1,14 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::error::Error;
-use std::fmt::{self, Formatter};
-use std::path::PathBuf;
 use std::rc::Rc;
 
 use alacritty_config::SerdeReplace;
-use alacritty_terminal::term::Config as TermConfig;
-use alacritty_terminal::term::Osc52;
-use alacritty_terminal::tty::{Options as PtyOptions, Shell};
-use serde::de::{Error as SerdeError, MapAccess, Visitor};
+use alacritty_terminal::tty::Shell;
 use serde::{self, Deserialize, Deserializer};
-use unicode_width::UnicodeWidthChar;
-use winit::keyboard::{Key, ModifiersState};
 
 use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 
 use crate::config::color::Colors;
-use crate::config::window::WindowConfig;
 
 /// Regex used for the default URL hint.
 #[rustfmt::skip]

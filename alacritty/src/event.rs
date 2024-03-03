@@ -161,11 +161,9 @@ impl Processor {
     pub fn create_initial_window(
         &mut self,
         event_loop: &EventLoopWindowTarget<Event>,
-        proxy: EventLoopProxy<Event>,
     ) -> Result<(), Box<dyn Error>> {
         let window_context = WindowContext::initial(
             event_loop,
-            proxy,
             Rc::new(UiConfig::default()),
             WindowOptions::default(),
         )?;
@@ -199,7 +197,7 @@ impl Processor {
             match event {
                 // The event loop just got initialized. Create a window.
                 WinitEvent::Resumed => {
-                    if let Err(err) = self.create_initial_window(event_loop, proxy.clone()) {
+                    if let Err(err) = self.create_initial_window(event_loop) {
                         *initial_window_error_loop = Err(err);
                         event_loop.exit();
                         return;
