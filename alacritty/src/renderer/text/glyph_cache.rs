@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-
-use ahash::RandomState;
 use crossfont::{
     Error as RasterizerError, FontDesc, FontKey, GlyphKey, Metrics, Rasterize, RasterizedGlyph,
     Rasterizer, Size, Slant, Style, Weight,
@@ -11,8 +8,6 @@ use unicode_width::UnicodeWidthChar;
 use crate::config::font::{Font, FontDescription};
 use crate::config::ui_config::Delta;
 use crate::gl::types::*;
-
-use super::builtin_font;
 
 /// `LoadGlyph` allows for copying a rasterized glyph into graphics memory.
 pub trait LoadGlyph {

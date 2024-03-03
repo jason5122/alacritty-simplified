@@ -25,8 +25,6 @@ use alacritty_terminal::term::{Term, MIN_COLUMNS, MIN_SCREEN_LINES};
 
 use crate::config::font::Font;
 use crate::config::window::Dimensions;
-#[cfg(not(windows))]
-use crate::config::window::StartupMode;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
 use crate::display::window::Window;

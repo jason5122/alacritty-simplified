@@ -1,15 +1,12 @@
 use bitflags::bitflags;
 use crossfont::{GlyphKey, RasterizedGlyph};
 
-use alacritty_terminal::term::cell::Flags;
-
 use crate::display::content::RenderableCell;
 use crate::display::SizeInfo;
 use crate::gl;
 use crate::gl::types::*;
 
 mod atlas;
-mod builtin_font;
 mod gles2;
 mod glsl3;
 pub mod glyph_cache;
