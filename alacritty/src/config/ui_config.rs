@@ -21,9 +21,7 @@ use crate::config::bindings::{
 };
 use crate::config::color::Colors;
 use crate::config::cursor::Cursor;
-use crate::config::font::Font;
 use crate::config::mouse::Mouse;
-use crate::config::selection::Selection;
 use crate::config::window::WindowConfig;
 
 /// Regex used for the default URL hint.

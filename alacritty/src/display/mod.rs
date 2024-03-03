@@ -18,7 +18,6 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 
-use crate::config::font::Font;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
 use crate::display::window::Window;
@@ -132,7 +131,6 @@ pub struct DisplayUpdate {
 
     dimensions: Option<PhysicalSize<u32>>,
     cursor_dirty: bool,
-    font: Option<Font>,
 }
 
 impl DisplayUpdate {
