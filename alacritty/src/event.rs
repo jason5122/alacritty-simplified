@@ -17,7 +17,6 @@ use winit::window::WindowId;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Scroll;
 
-use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
 use crate::input::{self};
@@ -63,7 +62,6 @@ impl From<TerminalEvent> for EventType {
 
 pub struct ActionContext<'a> {
     pub display: &'a mut Display,
-    pub config: &'a UiConfig,
     pub event_loop: &'a EventLoopWindowTarget<Event>,
     pub event_proxy: &'a EventLoopProxy<Event>,
     pub scheduler: &'a mut Scheduler,
@@ -160,7 +158,7 @@ impl Processor {
         &mut self,
         event_loop: &EventLoopWindowTarget<Event>,
     ) -> Result<(), Box<dyn Error>> {
-        let window_context = WindowContext::initial(event_loop, Rc::new(UiConfig::default()))?;
+        let window_context = WindowContext::initial(event_loop)?;
 
         self.gl_display = Some(window_context.display.gl_context().display());
         self.windows.insert(window_context.id(), window_context);

@@ -10,7 +10,6 @@ use winit::event::{Event as WinitEvent, WindowEvent};
 use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
-use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
 use crate::event::{ActionContext, Event};
@@ -23,21 +22,17 @@ pub struct WindowContext {
     pub dirty: bool,
     event_queue: Vec<WinitEvent<Event>>,
     occluded: bool,
-    config: Rc<UiConfig>,
 }
 
 impl WindowContext {
     /// Create initial window context that does bootstrapping the graphics API we're going to use.
-    pub fn initial(
-        event_loop: &EventLoopWindowTarget<Event>,
-        config: Rc<UiConfig>,
-    ) -> Result<Self, Box<dyn Error>> {
+    pub fn initial(event_loop: &EventLoopWindowTarget<Event>) -> Result<Self, Box<dyn Error>> {
         let raw_display_handle = event_loop.raw_display_handle();
 
         // Windows has different order of GL platform initialization compared to any other platform;
         // it requires the window first.
         #[cfg(windows)]
-        let window = Window::new(event_loop, &config)?;
+        let window = Window::new(event_loop)?;
         #[cfg(windows)]
         let raw_window_handle = Some(window.raw_window_handle());
 
@@ -59,16 +54,15 @@ impl WindowContext {
         let gl_context =
             renderer::platform::create_gl_context(&gl_display, &gl_config, raw_window_handle)?;
 
-        let display = Display::new(window, gl_context, &config, false)?;
+        let display = Display::new(window, gl_context, false)?;
 
-        Self::new(display, config)
+        Self::new(display)
     }
 
     /// Create a new terminal window context.
-    fn new(display: Display, config: Rc<UiConfig>) -> Result<Self, Box<dyn Error>> {
+    fn new(display: Display) -> Result<Self, Box<dyn Error>> {
         Ok(WindowContext {
             display,
-            config,
             event_queue: Default::default(),
             occluded: Default::default(),
             dirty: Default::default(),
@@ -119,7 +113,6 @@ impl WindowContext {
             display: &mut self.display,
             dirty: &mut self.dirty,
             occluded: &mut self.occluded,
-            config: &self.config,
             event_proxy,
             event_loop,
             scheduler,

@@ -18,8 +18,7 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self};
 
-use crate::config::UiConfig;
-use crate::display::color::{List, Rgb};
+use crate::display::color::Rgb;
 use crate::display::window::Window;
 use crate::event::{Event, EventType};
 use crate::renderer::rects::RenderRect;
@@ -155,9 +154,6 @@ pub struct Display {
     /// UI cursor visibility for blinking.
     pub cursor_hidden: bool,
 
-    /// Mapped RGB values for each terminal color.
-    pub colors: List,
-
     /// Unprocessed display updates.
     pub pending_update: DisplayUpdate,
 
@@ -178,7 +174,6 @@ impl Display {
     pub fn new(
         window: Window,
         gl_context: NotCurrentContext,
-        config: &UiConfig,
         _tabbed: bool,
     ) -> Result<Display, Error> {
         let raw_window_handle = window.raw_window_handle();
@@ -199,9 +194,7 @@ impl Display {
         // Create new size with at least one column and row.
         let size_info = SizeInfo::new(viewport_size.width as f32, viewport_size.height as f32);
 
-        // Clear screen.
-        let background_color = config.colors.primary.background;
-        renderer.clear(background_color, 1.0);
+        renderer.clear(Rgb::new(24, 24, 24), 1.0);
 
         // On Wayland we can safely ignore this call, since the window isn't visible until you
         // actually draw something into it and commit those changes.
@@ -222,7 +215,6 @@ impl Display {
             context: ManuallyDrop::new(Replaceable::new(context)),
             renderer: ManuallyDrop::new(renderer),
             surface: ManuallyDrop::new(surface),
-            colors: List::from(&config.colors),
             frame_timer: FrameTimer::new(),
             raw_window_handle,
             size_info,
