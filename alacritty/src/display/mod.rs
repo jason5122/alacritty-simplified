@@ -336,12 +336,6 @@ impl Display {
         let metrics = glyph_cache.font_metrics();
         let (cell_width, cell_height) = compute_cell_size(config, &metrics);
 
-        // Resize the window to account for the user configured size.
-        if let Some(dimensions) = config.window.dimensions() {
-            let size = window_size(config, dimensions, cell_width, cell_height, scale_factor);
-            window.request_inner_size(size);
-        }
-
         // Create the GL surface to draw into.
         let surface = renderer::platform::create_gl_surface(
             &gl_context,
@@ -369,10 +363,6 @@ impl Display {
             config.window.dynamic_padding && config.window.dimensions().is_none(),
         );
 
-        info!("Cell size: {} x {}", cell_width, cell_height);
-        info!("Padding: {} x {}", size_info.padding_x(), size_info.padding_y());
-        info!("Width: {}, Height: {}", size_info.width(), size_info.height());
-
         // Update OpenGL projection.
         renderer.resize(&size_info);
 
@@ -380,36 +370,15 @@ impl Display {
         let background_color = config.colors.primary.background;
         renderer.clear(background_color, config.window_opacity());
 
-        // Disable shadows for transparent windows on macOS.
-        #[cfg(target_os = "macos")]
-        window.set_has_shadow(config.window_opacity() >= 1.0);
-
-        let is_wayland = matches!(raw_window_handle, RawWindowHandle::Wayland(_));
-
         // On Wayland we can safely ignore this call, since the window isn't visible until you
         // actually draw something into it and commit those changes.
+        let is_wayland = matches!(raw_window_handle, RawWindowHandle::Wayland(_));
         if !is_wayland {
             surface.swap_buffers(&context).expect("failed to swap buffers.");
             renderer.finish();
         }
 
-        // Set resize increments for the newly created window.
-        if config.window.resize_increments {
-            window.set_resize_increments(PhysicalSize::new(cell_width, cell_height));
-        }
-
         window.set_visible(true);
-
-        #[allow(clippy::single_match)]
-        #[cfg(not(windows))]
-        if !_tabbed {
-            match config.window.startup_mode {
-                #[cfg(target_os = "macos")]
-                StartupMode::SimpleFullscreen => window.set_simple_fullscreen(true),
-                StartupMode::Maximized if !is_wayland => window.set_maximized(true),
-                _ => (),
-            }
-        }
 
         // Disable vsync.
         if let Err(err) = surface.set_swap_interval(&context, SwapInterval::DontWait) {
@@ -601,20 +570,6 @@ impl Drop for Display {
             ManuallyDrop::drop(&mut self.surface);
         }
     }
-}
-
-#[derive(Debug, Default, PartialEq, Eq)]
-pub struct Preedit {
-    /// The preedit text.
-    text: String,
-
-    /// Byte offset for cursor start into the preedit text.
-    ///
-    /// `None` means that the cursor is invisible.
-    cursor_byte_offset: Option<usize>,
-
-    /// The cursor offset from the end of the preedit in char width.
-    cursor_end_offset: Option<usize>,
 }
 
 /// Pending renderer updates.

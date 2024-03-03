@@ -54,20 +54,6 @@ pub trait TextRenderer<'a> {
     /// Get loader API for the renderer.
     fn loader_api(&mut self) -> LoaderApi<'_>;
 
-    /// Draw cells.
-    fn draw_cells<'b: 'a, I: Iterator<Item = RenderableCell>>(
-        &'b mut self,
-        size_info: &'b SizeInfo,
-        glyph_cache: &'a mut GlyphCache,
-        cells: I,
-    ) {
-        self.with_api(size_info, |mut api| {
-            for cell in cells {
-                api.draw_cell(cell, glyph_cache, size_info);
-            }
-        })
-    }
-
     fn with_api<'b: 'a, F, T>(&'b mut self, size_info: &'b SizeInfo, func: F) -> T
     where
         F: FnOnce(Self::RenderApi) -> T;
@@ -128,46 +114,6 @@ pub trait TextRenderApi<T: TextRenderBatch>: LoadGlyph {
         // Render batch and clear if it's full.
         if self.batch().full() {
             self.render_batch();
-        }
-    }
-
-    /// Draw cell.
-    fn draw_cell(
-        &mut self,
-        mut cell: RenderableCell,
-        glyph_cache: &mut GlyphCache,
-        size_info: &SizeInfo,
-    ) {
-        // Get font key for cell.
-        let font_key = match cell.flags & Flags::BOLD_ITALIC {
-            Flags::BOLD_ITALIC => glyph_cache.bold_italic_key,
-            Flags::ITALIC => glyph_cache.italic_key,
-            Flags::BOLD => glyph_cache.bold_key,
-            _ => glyph_cache.font_key,
-        };
-
-        // Ignore hidden cells and render tabs as spaces to prevent font issues.
-        let hidden = cell.flags.contains(Flags::HIDDEN);
-        if cell.character == '\t' || hidden {
-            cell.character = ' ';
-        }
-
-        let mut glyph_key =
-            GlyphKey { font_key, size: glyph_cache.font_size, character: cell.character };
-
-        // Add cell to batch.
-        let glyph = glyph_cache.get(glyph_key, self, true);
-        self.add_render_item(&cell, &glyph, size_info);
-
-        // Render visible zero-width characters.
-        if let Some(zerowidth) =
-            cell.extra.as_mut().and_then(|extra| extra.zerowidth.take().filter(|_| !hidden))
-        {
-            for character in zerowidth {
-                glyph_key.character = character;
-                let glyph = glyph_cache.get(glyph_key, self, false);
-                self.add_render_item(&cell, &glyph, size_info);
-            }
         }
     }
 }
