@@ -2,8 +2,6 @@ use std::mem;
 
 use log::info;
 
-use alacritty_terminal::index::Point;
-
 use crate::display::color::Rgb;
 use crate::display::SizeInfo;
 use crate::gl;
@@ -28,13 +26,6 @@ impl RenderRect {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct RenderLine {
-    pub start: Point<usize>,
-    pub end: Point<usize>,
-    pub color: Rgb,
-}
-
 // NOTE: These flags must be in sync with their usage in the rect.*.glsl shaders.
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -45,10 +36,6 @@ pub enum RectKind {
     DashedUnderline = 3,
     NumKinds = 4,
 }
-
-/// Lines for underline and strikeout.
-#[derive(Default)]
-pub struct RenderLines {}
 
 /// Shader sources for rect rendering program.
 static RECT_SHADER_F: &str = include_str!("../../res/rect.f.glsl");
