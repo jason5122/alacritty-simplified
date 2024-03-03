@@ -52,7 +52,6 @@ version = "0.14.0-dev"
 dependencies = [
  "ahash",
  "alacritty_config",
- "alacritty_config_derive",
  "alacritty_terminal",
  "bitflags 2.4.1",
  "clap",
@@ -86,22 +85,8 @@ dependencies = [
 name = "alacritty_config"
 version = "0.2.1-dev"
 dependencies = [
- "alacritty_config_derive",
  "log",
  "serde",
- "toml",
-]
-
-[[package]]
-name = "alacritty_config_derive"
-version = "0.2.3-dev"
-dependencies = [
- "alacritty_config",
- "log",
- "proc-macro2",
- "quote",
- "serde",
- "syn",
  "toml",
 ]
 

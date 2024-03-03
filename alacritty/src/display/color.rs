@@ -5,10 +5,9 @@ use std::str::FromStr;
 use serde::de::{Error as SerdeError, Visitor};
 use serde::{Deserialize, Deserializer};
 
-use alacritty_config_derive::SerdeReplace;
 use alacritty_terminal::vte::ansi::Rgb as VteRgb;
 
-#[derive(SerdeReplace, Debug, Eq, PartialEq, Copy, Clone, Default)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Default)]
 pub struct Rgb(pub VteRgb);
 
 impl Rgb {
