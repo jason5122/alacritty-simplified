@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "alacritty",
-  "alacritty_terminal",
 ]
 resolver = "2"
 

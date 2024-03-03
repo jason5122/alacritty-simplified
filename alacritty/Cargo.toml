@@ -9,10 +9,6 @@ homepage = "https://github.com/alacritty/alacritty"
 edition = "2021"
 rust-version = "1.72.0"
 
-[dependencies.alacritty_terminal]
-path = "../alacritty_terminal"
-version = "0.22.1-dev"
-
 [dependencies]
 ahash = { version = "0.8.6", features = ["no-rng"] }
 bitflags = "2.2.1"
