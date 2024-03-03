@@ -113,7 +113,7 @@ impl Window {
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
         x11_visual: Option<X11VisualInfo>,
     ) -> Result<Window> {
-        let window_builder = Window::get_platform_window(
+        let mut window_builder = Window::get_platform_window(
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             x11_visual,
         );
@@ -190,9 +190,7 @@ impl Window {
                 .expect("invalid embedded icon format")
         };
 
-        let builder = WindowBuilder::new()
-            .with_name(&identity.class.general, &identity.class.instance)
-            .with_decorations(true);
+        let builder = WindowBuilder::new().with_decorations(true);
 
         #[cfg(feature = "x11")]
         let builder = builder.with_window_icon(Some(icon));
