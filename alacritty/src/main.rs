@@ -27,7 +27,6 @@ mod input;
 mod macos;
 mod renderer;
 mod scheduler;
-mod string;
 mod window_context;
 
 mod gl {
