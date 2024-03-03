@@ -36,8 +36,6 @@ use winit::window::{
     CursorIcon, Theme as WinitTheme, Window as WinitWindow, WindowBuilder, WindowId,
 };
 
-use crate::config::window::Identity;
-
 /// Window icon for `_NET_WM_ICON` property.
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 static WINDOW_ICON: &[u8] = include_bytes!("../../extra/logo/compat/alacritty-term.png");
@@ -112,19 +110,12 @@ impl Window {
     pub fn new<E>(
         event_loop: &EventLoopWindowTarget<E>,
         #[rustfmt::skip]
-        #[cfg(target_os = "macos")]
-        tabbing_id: &Option<String>,
-        #[rustfmt::skip]
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
         x11_visual: Option<X11VisualInfo>,
     ) -> Result<Window> {
-        let identity = Identity::default();
         let window_builder = Window::get_platform_window(
-            &identity,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             x11_visual,
-            #[cfg(target_os = "macos")]
-            tabbing_id,
         );
 
         #[cfg(not(any(target_os = "macos", windows)))]
@@ -137,7 +128,7 @@ impl Window {
         }
 
         let window = window_builder
-            .with_title(&identity.title)
+            .with_title("Alacritty Simplified")
             .with_theme(Some(WinitTheme::Light))
             .with_visible(false)
             .with_transparent(true)
@@ -184,7 +175,6 @@ impl Window {
 
     #[cfg(not(any(target_os = "macos", windows)))]
     pub fn get_platform_window(
-        identity: &Identity,
         #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))] x11_visual: Option<
             X11VisualInfo,
         >,
@@ -217,7 +207,7 @@ impl Window {
     }
 
     #[cfg(windows)]
-    pub fn get_platform_window(_: &Identity) -> WindowBuilder {
+    pub fn get_platform_window() -> WindowBuilder {
         let icon = winit::window::Icon::from_resource(IDI_ICON, None);
 
         WindowBuilder::new()
@@ -226,14 +216,8 @@ impl Window {
     }
 
     #[cfg(target_os = "macos")]
-    pub fn get_platform_window(_: &Identity, tabbing_id: &Option<String>) -> WindowBuilder {
-        let mut window = WindowBuilder::new();
-
-        if let Some(tabbing_id) = tabbing_id {
-            window = window.with_tabbing_identifier(tabbing_id);
-        }
-
-        window
+    pub fn get_platform_window() -> WindowBuilder {
+        WindowBuilder::new()
     }
 
     pub fn id(&self) -> WindowId {

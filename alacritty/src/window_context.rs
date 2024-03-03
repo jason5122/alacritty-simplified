@@ -10,7 +10,6 @@ use winit::event::{Event as WinitEvent, WindowEvent};
 use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
-use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
@@ -32,7 +31,6 @@ impl WindowContext {
     pub fn initial(
         event_loop: &EventLoopWindowTarget<Event>,
         config: Rc<UiConfig>,
-        options: WindowOptions,
     ) -> Result<Self, Box<dyn Error>> {
         let raw_display_handle = event_loop.raw_display_handle();
 
@@ -55,8 +53,6 @@ impl WindowContext {
             event_loop,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             gl_config.x11_visual(),
-            #[cfg(target_os = "macos")]
-            &options.window_tabbing_id,
         )?;
 
         // Create context.

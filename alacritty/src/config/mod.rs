@@ -7,7 +7,6 @@ use toml::ser::Error as TomlSeError;
 
 pub mod color;
 pub mod ui_config;
-pub mod window;
 
 pub use crate::config::ui_config::UiConfig;
 

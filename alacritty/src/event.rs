@@ -17,7 +17,6 @@ use winit::window::WindowId;
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Scroll;
 
-use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
@@ -52,7 +51,6 @@ impl From<Event> for WinitEvent<Event> {
 pub enum EventType {
     Terminal(TerminalEvent),
     Scroll(Scroll),
-    CreateWindow(WindowOptions),
     SearchNext,
     Frame,
 }
@@ -162,11 +160,7 @@ impl Processor {
         &mut self,
         event_loop: &EventLoopWindowTarget<Event>,
     ) -> Result<(), Box<dyn Error>> {
-        let window_context = WindowContext::initial(
-            event_loop,
-            Rc::new(UiConfig::default()),
-            WindowOptions::default(),
-        )?;
+        let window_context = WindowContext::initial(event_loop, Rc::new(UiConfig::default()))?;
 
         self.gl_display = Some(window_context.display.gl_context().display());
         self.windows.insert(window_context.id(), window_context);
