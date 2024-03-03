@@ -361,9 +361,6 @@ impl Display {
             config.window.dynamic_padding && config.window.dimensions().is_none(),
         );
 
-        // Update OpenGL projection.
-        renderer.resize(&size_info);
-
         // Clear screen.
         let background_color = config.colors.primary.background;
         renderer.clear(background_color, config.window_opacity());
@@ -483,8 +480,6 @@ impl Display {
 
         // Ensure we're modifying the correct OpenGL context.
         self.make_current();
-
-        self.renderer.resize(&self.size_info);
     }
 
     /// Draw the screen.

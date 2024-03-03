@@ -90,7 +90,6 @@ enum TextRendererProvider {
 
 #[derive(Debug)]
 pub struct Renderer {
-    text_renderer: TextRendererProvider,
     rect_renderer: RectRenderer,
 }
 
@@ -149,15 +148,10 @@ impl Renderer {
             None => (shader_version.as_ref() >= "3.3" && !is_gles_context, true),
         };
 
-        let (text_renderer, rect_renderer) = if use_glsl3 {
-            let text_renderer = TextRendererProvider::Glsl3(Glsl3Renderer::new()?);
-            let rect_renderer = RectRenderer::new(ShaderVersion::Glsl3)?;
-            (text_renderer, rect_renderer)
+        let rect_renderer = if use_glsl3 {
+            RectRenderer::new(ShaderVersion::Glsl3)?
         } else {
-            let text_renderer =
-                TextRendererProvider::Gles2(Gles2Renderer::new(allow_dsb, is_gles_context)?);
-            let rect_renderer = RectRenderer::new(ShaderVersion::Gles2)?;
-            (text_renderer, rect_renderer)
+            RectRenderer::new(ShaderVersion::Gles2)?
         };
 
         // Enable debug logging for OpenGL as well.
@@ -170,17 +164,7 @@ impl Renderer {
             }
         }
 
-        Ok(Self { text_renderer, rect_renderer })
-    }
-
-    pub fn with_loader<F, T>(&mut self, func: F) -> T
-    where
-        F: FnOnce(LoaderApi<'_>) -> T,
-    {
-        match &mut self.text_renderer {
-            TextRendererProvider::Gles2(renderer) => renderer.with_loader(func),
-            TextRendererProvider::Glsl3(renderer) => renderer.with_loader(func),
-        }
+        Ok(Self { rect_renderer })
     }
 
     /// Draw all rectangles simultaneously to prevent excessive program swaps.
@@ -237,15 +221,6 @@ impl Renderer {
                 size.width() as i32 - 2 * size.padding_x() as i32,
                 size.height() as i32 - 2 * size.padding_y() as i32,
             );
-        }
-    }
-
-    /// Resize the renderer.
-    pub fn resize(&self, size_info: &SizeInfo) {
-        self.set_viewport(size_info);
-        match &self.text_renderer {
-            TextRendererProvider::Gles2(renderer) => renderer.resize(size_info),
-            TextRendererProvider::Glsl3(renderer) => renderer.resize(size_info),
         }
     }
 }
