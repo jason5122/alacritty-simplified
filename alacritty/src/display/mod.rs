@@ -216,7 +216,7 @@ impl Display {
 
         // Clear screen.
         let background_color = config.colors.primary.background;
-        renderer.clear(background_color, config.window_opacity());
+        renderer.clear(background_color, 1.0);
 
         // On Wayland we can safely ignore this call, since the window isn't visible until you
         // actually draw something into it and commit those changes.
@@ -327,7 +327,7 @@ impl Display {
         // Make sure this window's OpenGL context is active.
         self.make_current();
 
-        self.renderer.clear(Rgb::new(24, 24, 24), config.window_opacity());
+        self.renderer.clear(Rgb::new(24, 24, 24), 1.0);
 
         // Ensure macOS hasn't reset our viewport.
         #[cfg(target_os = "macos")]

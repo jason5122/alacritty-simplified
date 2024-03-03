@@ -55,17 +55,8 @@ pub struct UiConfig {
     /// Debug options.
     pub debug: Debug,
 
-    /// Send escape sequences using the alt key.
-    #[config(removed = "It's now always set to 'true'. If you're on macOS use \
-                        'window.option_as_alt' to alter behavior of Option")]
-    pub alt_send_esc: Option<bool>,
-
     /// RGB values for colors.
     pub colors: Colors,
-
-    /// Path where config was loaded from.
-    #[config(skip)]
-    pub config_paths: Vec<PathBuf>,
 
     /// Regex hints for interacting with terminal content.
     pub hints: Hints,
@@ -73,15 +64,8 @@ pub struct UiConfig {
     /// Path to a shell program to run on startup.
     pub shell: Option<Program>,
 
-    /// Shell startup directory.
-    pub working_directory: Option<PathBuf>,
-
     /// Keyboard configuration.
     keyboard: Keyboard,
-
-    /// Should draw bold text with brighter colors instead of bold font.
-    #[config(deprecated = "use colors.draw_bold_text_with_bright_colors instead")]
-    draw_bold_text_with_bright_colors: bool,
 
     /// Configuration file imports.
     ///
@@ -93,10 +77,6 @@ pub struct UiConfig {
 impl Default for UiConfig {
     fn default() -> Self {
         Self {
-            draw_bold_text_with_bright_colors: Default::default(),
-            working_directory: Default::default(),
-            config_paths: Default::default(),
-            alt_send_esc: Default::default(),
             selection: Default::default(),
             keyboard: Default::default(),
             import: Default::default(),
@@ -110,36 +90,6 @@ impl Default for UiConfig {
             font: Default::default(),
             env: Default::default(),
         }
-    }
-}
-
-impl UiConfig {
-    /// Derive [`TermConfig`] from the config.
-    pub fn term_options(&self) -> TermConfig {
-        TermConfig {
-            semantic_escape_chars: self.selection.semantic_escape_chars.clone(),
-            scrolling_history: 10_000 as usize,
-            vi_mode_cursor_style: self.cursor.vi_mode_style(),
-            default_cursor_style: self.cursor.style(),
-            kitty_keyboard: true,
-            osc52: Osc52::default(),
-        }
-    }
-
-    /// Derive [`PtyOptions`] from the config.
-    pub fn pty_config(&self) -> PtyOptions {
-        let shell = self.shell.clone().map(Into::into);
-        PtyOptions { shell, working_directory: self.working_directory.clone(), hold: false }
-    }
-
-    #[inline]
-    pub fn window_opacity(&self) -> f32 {
-        self.window.opacity.as_f32()
-    }
-
-    #[inline]
-    pub fn draw_bold_text_with_bright_colors(&self) -> bool {
-        self.colors.draw_bold_text_with_bright_colors || self.draw_bold_text_with_bright_colors
     }
 }
 

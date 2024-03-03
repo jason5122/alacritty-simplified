@@ -163,13 +163,6 @@ impl Window {
         let current_mouse_cursor = CursorIcon::Text;
         window.set_cursor_icon(current_mouse_cursor);
 
-        // Enable IME.
-        window.set_ime_allowed(true);
-        window.set_ime_purpose(ImePurpose::Terminal);
-
-        // Set initial transparency hint.
-        window.set_transparent(config.window_opacity() < 1.);
-
         #[cfg(target_os = "macos")]
         use_srgb_color_space(&window);
 
