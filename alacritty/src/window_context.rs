@@ -11,9 +11,9 @@ use winit::window::WindowId;
 
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::event::{ActionContext, Event};
+use crate::event::{ActionContext, Event, InputProcessor};
+use crate::renderer;
 use crate::scheduler::Scheduler;
-use crate::{input, renderer};
 
 /// Event context for one individual Alacritty window.
 pub struct WindowContext {
@@ -116,7 +116,7 @@ impl WindowContext {
             event_loop,
             scheduler,
         };
-        let mut processor = input::Processor::new(context);
+        let mut processor = InputProcessor::new(context);
 
         for event in self.event_queue.drain(..) {
             processor.handle_event(event);

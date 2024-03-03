@@ -15,9 +15,22 @@ use winit::window::WindowId;
 
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::input::{self};
 use crate::scheduler::Scheduler;
 use crate::window_context::WindowContext;
+
+pub struct InputProcessor<A: InputActionContext> {
+    pub ctx: A,
+}
+
+pub trait InputActionContext {
+    fn window(&mut self) -> &mut Window;
+}
+
+impl<A: InputActionContext> InputProcessor<A> {
+    pub fn new(ctx: A) -> Self {
+        Self { ctx }
+    }
+}
 
 /// Alacritty events.
 #[derive(Debug, Clone)]
@@ -57,14 +70,14 @@ pub struct ActionContext<'a> {
     pub occluded: &'a mut bool,
 }
 
-impl<'a> input::ActionContext for ActionContext<'a> {
+impl<'a> InputActionContext for ActionContext<'a> {
     #[inline]
     fn window(&mut self) -> &mut Window {
         &mut self.display.window
     }
 }
 
-impl input::Processor<ActionContext<'_>> {
+impl InputProcessor<ActionContext<'_>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
         match event {

@@ -22,7 +22,6 @@ use winit::platform::x11::EventLoopWindowTargetExtX11;
 
 mod display;
 mod event;
-mod input;
 #[cfg(target_os = "macos")]
 mod macos;
 mod renderer;
