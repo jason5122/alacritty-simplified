@@ -13,9 +13,6 @@ use winit::event_loop::{
 };
 use winit::window::WindowId;
 
-use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
-use alacritty_terminal::grid::Scroll;
-
 use crate::display::window::Window;
 use crate::display::Display;
 use crate::input::{self};
@@ -47,16 +44,8 @@ impl From<Event> for WinitEvent<Event> {
 /// Alacritty events.
 #[derive(Debug, Clone)]
 pub enum EventType {
-    Terminal(TerminalEvent),
-    Scroll(Scroll),
     SearchNext,
     Frame,
-}
-
-impl From<TerminalEvent> for EventType {
-    fn from(event: TerminalEvent) -> Self {
-        Self::Terminal(event)
-    }
 }
 
 pub struct ActionContext<'a> {
@@ -68,14 +57,14 @@ pub struct ActionContext<'a> {
     pub occluded: &'a mut bool,
 }
 
-impl<'a, T: EventListener> input::ActionContext<T> for ActionContext<'a> {
+impl<'a> input::ActionContext for ActionContext<'a> {
     #[inline]
     fn window(&mut self) -> &mut Window {
         &mut self.display.window
     }
 }
 
-impl input::Processor<EventProxy, ActionContext<'_>> {
+impl input::Processor<ActionContext<'_>> {
     /// Handle events from winit.
     pub fn handle_event(&mut self, event: WinitEvent<Event>) {
         match event {
@@ -199,18 +188,6 @@ impl Processor {
                 // NOTE: This event bypasses batching to minimize input latency.
                 WinitEvent::UserEvent(Event {
                     window_id: Some(window_id),
-                    payload: EventType::Terminal(TerminalEvent::Wakeup),
-                }) => {
-                    if let Some(window_context) = self.windows.get_mut(&window_id) {
-                        window_context.dirty = true;
-                        if window_context.display.window.has_frame {
-                            window_context.display.window.request_redraw();
-                        }
-                    }
-                },
-                // NOTE: This event bypasses batching to minimize input latency.
-                WinitEvent::UserEvent(Event {
-                    window_id: Some(window_id),
                     payload: EventType::Frame,
                 }) => {
                     if let Some(window_context) = self.windows.get_mut(&window_id) {
@@ -218,25 +195,6 @@ impl Processor {
                         if window_context.dirty {
                             window_context.display.window.request_redraw();
                         }
-                    }
-                },
-                // Check for shutdown.
-                WinitEvent::UserEvent(Event {
-                    window_id: Some(window_id),
-                    payload: EventType::Terminal(TerminalEvent::Exit),
-                }) => {
-                    // Remove the closed terminal.
-                    let window_context = match self.windows.remove(&window_id) {
-                        Some(window_context) => window_context,
-                        None => return,
-                    };
-
-                    // Unschedule pending events.
-                    scheduler.unschedule_window(window_context.id());
-
-                    // Shutdown if no more terminals are open.
-                    if self.windows.is_empty() {
-                        event_loop.exit();
                     }
                 },
                 WinitEvent::WindowEvent { window_id, event: WindowEvent::RedrawRequested } => {
@@ -316,17 +274,5 @@ impl Processor {
             WinitEvent::Suspended { .. } | WinitEvent::NewEvents { .. } => true,
             _ => false,
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct EventProxy {
-    proxy: EventLoopProxy<Event>,
-    window_id: WindowId,
-}
-
-impl EventListener for EventProxy {
-    fn send_event(&self, event: TerminalEvent) {
-        let _ = self.proxy.send_event(Event::new(event.into(), self.window_id));
     }
 }

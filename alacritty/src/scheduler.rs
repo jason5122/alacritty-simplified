@@ -84,12 +84,4 @@ impl Scheduler {
 
         self.timers.insert(index, Timer { interval, deadline, event, id: timer_id });
     }
-
-    /// Remove all timers scheduled for a window.
-    ///
-    /// This must be called when a window is removed to ensure that timers on intervals do not
-    /// stick around forever and cause a memory leak.
-    pub fn unschedule_window(&mut self, window_id: WindowId) {
-        self.timers.retain(|timer| timer.id.window_id != window_id);
-    }
 }

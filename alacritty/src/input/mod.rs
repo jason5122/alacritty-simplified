@@ -1,24 +1,19 @@
-use std::marker::PhantomData;
-
-use alacritty_terminal::event::EventListener;
-
 use crate::display::window::Window;
 
 /// Processes input from winit.
 ///
 /// An escape sequence may be emitted in case specific keys or key combinations
 /// are activated.
-pub struct Processor<T: EventListener, A: ActionContext<T>> {
+pub struct Processor<A: ActionContext> {
     pub ctx: A,
-    _phantom: PhantomData<T>,
 }
 
-pub trait ActionContext<T: EventListener> {
+pub trait ActionContext {
     fn window(&mut self) -> &mut Window;
 }
 
-impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
+impl<A: ActionContext> Processor<A> {
     pub fn new(ctx: A) -> Self {
-        Self { ctx, _phantom: Default::default() }
+        Self { ctx }
     }
 }
