@@ -20,8 +20,6 @@ use crate::config::bindings::{
     self, Binding, BindingKey, KeyBinding, KeyLocation, ModeWrapper, ModsWrapper,
 };
 use crate::config::color::Colors;
-use crate::config::cursor::Cursor;
-use crate::config::mouse::Mouse;
 use crate::config::window::WindowConfig;
 
 /// Regex used for the default URL hint.

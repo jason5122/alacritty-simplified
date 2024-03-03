@@ -6,12 +6,10 @@ use toml::de::Error as TomlError;
 use toml::ser::Error as TomlSeError;
 
 pub mod color;
-pub mod cursor;
 pub mod ui_config;
 pub mod window;
 
 mod bindings;
-mod mouse;
 
 pub use crate::config::bindings::Action;
 pub use crate::config::ui_config::UiConfig;
