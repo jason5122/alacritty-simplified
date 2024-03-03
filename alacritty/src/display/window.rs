@@ -23,7 +23,6 @@ use {
     cocoa::appkit::NSColorSpace,
     cocoa::base::{id, nil},
     objc::{msg_send, sel, sel_impl},
-    winit::platform::macos::WindowBuilderExtMacOS,
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};

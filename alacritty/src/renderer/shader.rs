@@ -1,4 +1,3 @@
-use std::ffi::CStr;
 use std::fmt;
 
 use crate::gl;
@@ -176,9 +175,6 @@ pub enum ShaderError {
 
     /// Error linking shader.
     Link(String),
-
-    /// Error getting uniform location.
-    Uniform(&'static CStr),
 }
 
 impl std::error::Error for ShaderError {}
@@ -188,7 +184,6 @@ impl fmt::Display for ShaderError {
         match self {
             Self::Compile(reason) => write!(f, "Failed compiling shader: {}", reason),
             Self::Link(reason) => write!(f, "Failed linking shader: {}", reason),
-            Self::Uniform(name) => write!(f, "Failed to get uniform location of {:?}", name),
         }
     }
 }

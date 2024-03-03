@@ -10,11 +10,6 @@ use alacritty_config_derive::{ConfigDeserialize, SerdeReplace};
 
 use crate::config::color::Colors;
 
-/// Regex used for the default URL hint.
-#[rustfmt::skip]
-const URL_REGEX: &str = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https://|http://|news:|file:|git://|ssh:|ftp://)\
-                         [^\u{0000}-\u{001F}\u{007F}-\u{009F}<>\"\\s{-}\\^⟨⟩`]+";
-
 #[derive(ConfigDeserialize, Clone, Debug, PartialEq)]
 pub struct UiConfig {
     pub colors: Colors,
