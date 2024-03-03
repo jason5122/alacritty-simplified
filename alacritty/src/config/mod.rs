@@ -9,9 +9,6 @@ pub mod color;
 pub mod ui_config;
 pub mod window;
 
-mod bindings;
-
-pub use crate::config::bindings::Action;
 pub use crate::config::ui_config::UiConfig;
 
 /// Errors occurring during config loading.

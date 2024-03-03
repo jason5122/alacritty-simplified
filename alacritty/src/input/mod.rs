@@ -2,7 +2,6 @@ use std::marker::PhantomData;
 
 use alacritty_terminal::event::EventListener;
 
-use crate::config::Action;
 use crate::display::window::Window;
 
 /// Processes input from winit.
@@ -20,15 +19,6 @@ pub trait ActionContext<T: EventListener> {
 
 trait Execute<T: EventListener> {
     fn execute<A: ActionContext<T>>(&self, ctx: &mut A);
-}
-
-impl<T: EventListener> Execute<T> for Action {
-    #[inline]
-    fn execute<A: ActionContext<T>>(&self, _: &mut A) {
-        match self {
-            _ => (),
-        }
-    }
 }
 
 impl<T: EventListener, A: ActionContext<T>> Processor<T, A> {
