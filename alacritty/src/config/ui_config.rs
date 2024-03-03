@@ -34,62 +34,12 @@ const URL_REGEX: &str = "(ipfs:|ipns:|magnet:|mailto:|gemini://|gopher://|https:
 
 #[derive(ConfigDeserialize, Clone, Debug, PartialEq)]
 pub struct UiConfig {
-    /// Extra environment variables.
-    pub env: HashMap<String, String>,
-
-    /// Cursor configuration.
-    pub cursor: Cursor,
-
-    /// Selection configuration.
-    pub selection: Selection,
-
-    /// Font configuration.
-    pub font: Font,
-
-    /// Window configuration.
-    pub window: WindowConfig,
-
-    /// Mouse configuration.
-    pub mouse: Mouse,
-
-    /// Debug options.
-    pub debug: Debug,
-
-    /// RGB values for colors.
     pub colors: Colors,
-
-    /// Regex hints for interacting with terminal content.
-    pub hints: Hints,
-
-    /// Path to a shell program to run on startup.
-    pub shell: Option<Program>,
-
-    /// Keyboard configuration.
-    keyboard: Keyboard,
-
-    /// Configuration file imports.
-    ///
-    /// This is never read since the field is directly accessed through the config's
-    /// [`toml::Value`], but still present to prevent unused field warnings.
-    import: Vec<String>,
 }
 
 impl Default for UiConfig {
     fn default() -> Self {
-        Self {
-            selection: Default::default(),
-            keyboard: Default::default(),
-            import: Default::default(),
-            cursor: Default::default(),
-            window: Default::default(),
-            colors: Default::default(),
-            shell: Default::default(),
-            mouse: Default::default(),
-            debug: Default::default(),
-            hints: Default::default(),
-            font: Default::default(),
-            env: Default::default(),
-        }
+        Self { colors: Default::default() }
     }
 }
 

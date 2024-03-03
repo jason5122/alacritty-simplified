@@ -18,6 +18,7 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 
+use crate::config::debug::RendererPreference;
 use crate::config::font::Font;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
@@ -169,9 +170,6 @@ pub struct Display {
     /// The state of the timer for frame scheduling.
     pub frame_timer: FrameTimer,
 
-    /// Font size used by the window.
-    pub font_size: FontSize,
-
     renderer: ManuallyDrop<Renderer>,
 
     surface: ManuallyDrop<Surface<WindowSurface>>,
@@ -191,10 +189,6 @@ impl Display {
         let scale_factor = window.scale_factor as f32;
         let rasterizer = Rasterizer::new()?;
 
-        let font_size = config.font.size().scale(scale_factor);
-        debug!("Loading \"{}\" font", &config.font.normal().family);
-        let font = config.font.clone().with_size(font_size);
-
         // Create the GL surface to draw into.
         let surface = renderer::platform::create_gl_surface(
             &gl_context,
@@ -206,9 +200,8 @@ impl Display {
         let context = gl_context.make_current(&surface)?;
 
         // Create renderer.
-        let mut renderer = Renderer::new(&context, config.debug.renderer)?;
+        let mut renderer = Renderer::new(&context, Some(RendererPreference::Glsl3))?;
 
-        let padding = config.window.padding(window.scale_factor as f32);
         let viewport_size = window.inner_size();
 
         // Create new size with at least one column and row.
@@ -241,7 +234,6 @@ impl Display {
             frame_timer: FrameTimer::new(),
             raw_window_handle,
             size_info,
-            font_size,
             window,
             pending_renderer_update: Default::default(),
             pending_update: Default::default(),
@@ -490,17 +482,4 @@ impl FrameTimer {
             next_frame - now
         }
     }
-}
-
-/// Calculate the cell dimensions based on font metrics.
-///
-/// This will return a tuple of the cell width and height.
-#[inline]
-fn compute_cell_size(config: &UiConfig, metrics: &crossfont::Metrics) -> (f32, f32) {
-    let offset_x = f64::from(config.font.offset.x);
-    let offset_y = f64::from(config.font.offset.y);
-    (
-        (metrics.average_advance + offset_x).floor().max(1.) as f32,
-        (metrics.line_height + offset_y).floor().max(1.) as f32,
-    )
 }

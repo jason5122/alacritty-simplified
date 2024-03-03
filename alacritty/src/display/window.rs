@@ -32,9 +32,12 @@ use winit::event_loop::EventLoopWindowTarget;
 use winit::monitor::MonitorHandle;
 #[cfg(windows)]
 use winit::platform::windows::IconExtWindows;
-use winit::window::{CursorIcon, ImePurpose, Window as WinitWindow, WindowBuilder, WindowId};
+use winit::window::{
+    CursorIcon, Fullscreen, ImePurpose, Theme as WinitTheme, Window as WinitWindow, WindowBuilder,
+    WindowId,
+};
 
-use crate::config::window::{Decorations, Identity, WindowConfig};
+use crate::config::window::{Decorations, Identity, StartupMode, WindowConfig};
 use crate::config::UiConfig;
 
 /// Window icon for `_NET_WM_ICON` property.
@@ -121,17 +124,11 @@ impl Window {
         let identity = Identity::default();
         let mut window_builder = Window::get_platform_window(
             &identity,
-            &config.window,
             #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
             x11_visual,
             #[cfg(target_os = "macos")]
             tabbing_id,
         );
-
-        if let Some(position) = config.window.position {
-            window_builder = window_builder
-                .with_position(PhysicalPosition::<i32>::from((position.x, position.y)));
-        }
 
         #[cfg(not(any(target_os = "macos", windows)))]
         if let Some(token) = event_loop.read_token_from_env() {
@@ -142,21 +139,14 @@ impl Window {
             startup_notify::reset_activation_token_env();
         }
 
-        // On X11, embed the window inside another if the parent ID has been set.
-        #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
-        if let Some(parent_window_id) = event_loop.is_x11().then_some(config.window.embed).flatten()
-        {
-            window_builder = window_builder.with_embed_parent_window(parent_window_id);
-        }
-
         let window = window_builder
             .with_title(&identity.title)
-            .with_theme(config.window.theme())
+            .with_theme(Some(WinitTheme::Light))
             .with_visible(false)
             .with_transparent(true)
-            .with_blur(config.window.blur)
-            .with_maximized(config.window.maximized())
-            .with_fullscreen(config.window.fullscreen())
+            .with_blur(false)
+            .with_maximized(true)
+            .with_fullscreen(None)
             .build(event_loop)?;
 
         // Text cursor.
@@ -231,7 +221,7 @@ impl Window {
     }
 
     #[cfg(windows)]
-    pub fn get_platform_window(_: &Identity, window_config: &WindowConfig) -> WindowBuilder {
+    pub fn get_platform_window(_: &Identity) -> WindowBuilder {
         let icon = winit::window::Icon::from_resource(IDI_ICON, None);
 
         WindowBuilder::new()
@@ -240,30 +230,14 @@ impl Window {
     }
 
     #[cfg(target_os = "macos")]
-    pub fn get_platform_window(
-        _: &Identity,
-        window_config: &WindowConfig,
-        tabbing_id: &Option<String>,
-    ) -> WindowBuilder {
-        let mut window = WindowBuilder::new().with_option_as_alt(window_config.option_as_alt());
+    pub fn get_platform_window(_: &Identity, tabbing_id: &Option<String>) -> WindowBuilder {
+        let mut window = WindowBuilder::new();
 
         if let Some(tabbing_id) = tabbing_id {
             window = window.with_tabbing_identifier(tabbing_id);
         }
 
-        match window_config.decorations {
-            Decorations::Full => window,
-            Decorations::Transparent => window
-                .with_title_hidden(true)
-                .with_titlebar_transparent(true)
-                .with_fullsize_content_view(true),
-            Decorations::Buttonless => window
-                .with_title_hidden(true)
-                .with_titlebar_buttons_hidden(true)
-                .with_titlebar_transparent(true)
-                .with_fullsize_content_view(true),
-            Decorations::None => window.with_titlebar_hidden(true),
-        }
+        window
     }
 
     pub fn id(&self) -> WindowId {

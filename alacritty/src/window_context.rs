@@ -37,9 +37,6 @@ impl WindowContext {
     ) -> Result<Self, Box<dyn Error>> {
         let raw_display_handle = event_loop.raw_display_handle();
 
-        let mut identity = config.window.identity.clone();
-        options.window_identity.override_identity_config(&mut identity);
-
         // Windows has different order of GL platform initialization compared to any other platform;
         // it requires the window first.
         #[cfg(windows)]
@@ -50,11 +47,8 @@ impl WindowContext {
         #[cfg(not(windows))]
         let raw_window_handle = None;
 
-        let gl_display = renderer::platform::create_gl_display(
-            raw_display_handle,
-            raw_window_handle,
-            config.debug.prefer_egl,
-        )?;
+        let gl_display =
+            renderer::platform::create_gl_display(raw_display_handle, raw_window_handle, false)?;
         let gl_config = renderer::platform::pick_gl_config(&gl_display, raw_window_handle)?;
 
         #[cfg(not(windows))]
