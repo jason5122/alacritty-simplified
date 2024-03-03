@@ -3,8 +3,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::Debug;
-#[cfg(not(windows))]
-use std::os::unix::io::RawFd;
 use std::rc::Rc;
 
 use ahash::RandomState;
@@ -18,7 +16,6 @@ use winit::window::WindowId;
 
 use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Scroll;
-use alacritty_terminal::term::Term;
 
 use crate::cli::WindowOptions;
 use crate::config::UiConfig;

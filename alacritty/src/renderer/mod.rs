@@ -6,7 +6,6 @@ use std::sync::OnceLock;
 use std::{fmt, ptr};
 
 use ahash::RandomState;
-use crossfont::Metrics;
 use glutin::context::{ContextApi, GlContext, PossiblyCurrentContext};
 use glutin::display::{GetGlDisplay, GlDisplay};
 use log::{debug, error, info, warn, LevelFilter};
@@ -23,14 +22,6 @@ pub mod rects;
 mod shader;
 
 use shader::ShaderVersion;
-
-macro_rules! cstr {
-    ($s:literal) => {
-        // This can be optimized into an no-op with pre-allocated NUL-terminated bytes.
-        unsafe { std::ffi::CStr::from_ptr(concat!($s, "\0").as_ptr().cast()) }
-    };
-}
-pub(crate) use cstr;
 
 /// Whether the OpenGL functions have been loaded.
 pub static GL_FUNS_LOADED: AtomicBool = AtomicBool::new(false);

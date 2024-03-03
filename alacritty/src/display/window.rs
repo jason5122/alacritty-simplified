@@ -21,9 +21,9 @@ use std::fmt::{self, Display, Formatter};
 #[cfg(target_os = "macos")]
 use {
     cocoa::appkit::NSColorSpace,
-    cocoa::base::{id, nil, NO, YES},
+    cocoa::base::{id, nil},
     objc::{msg_send, sel, sel_impl},
-    winit::platform::macos::{WindowBuilderExtMacOS, WindowExtMacOS},
+    winit::platform::macos::WindowBuilderExtMacOS,
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -185,11 +185,6 @@ impl Window {
     }
 
     #[inline]
-    pub fn request_inner_size(&self, size: PhysicalSize<u32>) {
-        let _ = self.window.request_inner_size(size);
-    }
-
-    #[inline]
     pub fn inner_size(&self) -> PhysicalSize<u32> {
         self.window.inner_size()
     }
@@ -282,14 +277,6 @@ impl Window {
         self.window.id()
     }
 
-    pub fn set_maximized(&self, maximized: bool) {
-        self.window.set_maximized(maximized);
-    }
-
-    pub fn set_resize_increments(&self, increments: PhysicalSize<f32>) {
-        self.window.set_resize_increments(Some(increments));
-    }
-
     /// Inform windowing system about presenting to the window.
     ///
     /// Should be called right before presenting to the window with e.g. `eglSwapBuffers`.
@@ -299,27 +286,6 @@ impl Window {
 
     pub fn current_monitor(&self) -> Option<MonitorHandle> {
         self.window.current_monitor()
-    }
-
-    #[cfg(target_os = "macos")]
-    pub fn set_simple_fullscreen(&self, simple_fullscreen: bool) {
-        self.window.set_simple_fullscreen(simple_fullscreen);
-    }
-
-    /// Disable macOS window shadows.
-    ///
-    /// This prevents rendering artifacts from showing up when the window is transparent.
-    #[cfg(target_os = "macos")]
-    pub fn set_has_shadow(&self, has_shadows: bool) {
-        let raw_window = match self.raw_window_handle() {
-            RawWindowHandle::AppKit(handle) => handle.ns_window as id,
-            _ => return,
-        };
-
-        let value = if has_shadows { YES } else { NO };
-        unsafe {
-            let _: id = msg_send![raw_window, setHasShadow: value];
-        }
     }
 }
 

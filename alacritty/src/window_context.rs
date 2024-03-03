@@ -1,10 +1,7 @@
 //! Terminal window context.
 
 use std::error::Error;
-#[cfg(not(windows))]
-use std::os::unix::io::{AsRawFd, RawFd};
 use std::rc::Rc;
-use std::sync::Arc;
 
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 use glutin::platform::x11::X11GlConfigExt;
@@ -13,16 +10,11 @@ use winit::event::{Event as WinitEvent, WindowEvent};
 use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
-use alacritty_terminal::event_loop::EventLoop as PtyEventLoop;
-use alacritty_terminal::sync::FairMutex;
-use alacritty_terminal::term::Term;
-use alacritty_terminal::tty;
-
 use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::event::{ActionContext, Event, EventProxy};
+use crate::event::{ActionContext, Event};
 use crate::scheduler::Scheduler;
 use crate::{input, renderer};
 

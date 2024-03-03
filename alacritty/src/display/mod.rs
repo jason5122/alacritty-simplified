@@ -1,7 +1,6 @@
 //! The display subsystem including window management, font rasterization, and
 //! GPU drawing.
 
-use std::cmp;
 use std::fmt::{self, Formatter};
 use std::mem::{self, ManuallyDrop};
 use std::num::NonZeroU32;
@@ -19,11 +18,7 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 
-use alacritty_terminal::event::WindowSize;
-use alacritty_terminal::term::{Term, MIN_COLUMNS, MIN_SCREEN_LINES};
-
 use crate::config::font::Font;
-use crate::config::window::Dimensions;
 use crate::config::UiConfig;
 use crate::display::color::{List, Rgb};
 use crate::display::window::Window;
@@ -33,7 +28,6 @@ use crate::renderer::{self, Renderer};
 use crate::scheduler::{Scheduler, TimerId, Topic};
 
 pub mod color;
-pub mod content;
 pub mod window;
 
 #[derive(Debug)]
@@ -509,23 +503,4 @@ fn compute_cell_size(config: &UiConfig, metrics: &crossfont::Metrics) -> (f32, f
         (metrics.average_advance + offset_x).floor().max(1.) as f32,
         (metrics.line_height + offset_y).floor().max(1.) as f32,
     )
-}
-
-/// Calculate the size of the window given padding, terminal dimensions and cell size.
-fn window_size(
-    config: &UiConfig,
-    dimensions: Dimensions,
-    cell_width: f32,
-    cell_height: f32,
-    scale_factor: f32,
-) -> PhysicalSize<u32> {
-    let padding = config.window.padding(scale_factor);
-
-    let grid_width = cell_width * dimensions.columns.max(MIN_COLUMNS) as f32;
-    let grid_height = cell_height * dimensions.lines.max(MIN_SCREEN_LINES) as f32;
-
-    let width = (padding.0).mul_add(2., grid_width).floor();
-    let height = (padding.1).mul_add(2., grid_height).floor();
-
-    PhysicalSize::new(width as u32, height as u32)
 }

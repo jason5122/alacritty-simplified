@@ -1,6 +1,5 @@
 use std::mem;
 
-use crossfont::Metrics;
 use log::info;
 
 use alacritty_terminal::index::Point;
@@ -10,7 +9,7 @@ use crate::display::SizeInfo;
 use crate::gl;
 use crate::gl::types::*;
 use crate::renderer::shader::{ShaderError, ShaderProgram, ShaderVersion};
-use crate::renderer::{self, cstr};
+use crate::renderer::{self};
 
 #[derive(Debug, Copy, Clone)]
 pub struct RenderRect {
@@ -230,32 +229,9 @@ impl Drop for RectRenderer {
     }
 }
 
-/// Rectangle drawing program.
 #[derive(Debug)]
 pub struct RectShaderProgram {
-    /// Shader program.
     program: ShaderProgram,
-
-    /// Cell width.
-    u_cell_width: Option<GLint>,
-
-    /// Cell height.
-    u_cell_height: Option<GLint>,
-
-    /// Terminal padding.
-    u_padding_x: Option<GLint>,
-
-    /// A padding from the bottom of the screen to viewport.
-    u_padding_y: Option<GLint>,
-
-    /// Underline position.
-    u_underline_position: Option<GLint>,
-
-    /// Underline thickness.
-    u_underline_thickness: Option<GLint>,
-
-    /// Undercurl position.
-    u_undercurl_position: Option<GLint>,
 }
 
 impl RectShaderProgram {
@@ -269,16 +245,7 @@ impl RectShaderProgram {
         };
         let program = ShaderProgram::new(shader_version, header, RECT_SHADER_V, RECT_SHADER_F)?;
 
-        Ok(Self {
-            u_cell_width: program.get_uniform_location(cstr!("cellWidth")).ok(),
-            u_cell_height: program.get_uniform_location(cstr!("cellHeight")).ok(),
-            u_padding_x: program.get_uniform_location(cstr!("paddingX")).ok(),
-            u_padding_y: program.get_uniform_location(cstr!("paddingY")).ok(),
-            u_underline_position: program.get_uniform_location(cstr!("underlinePosition")).ok(),
-            u_underline_thickness: program.get_uniform_location(cstr!("underlineThickness")).ok(),
-            u_undercurl_position: program.get_uniform_location(cstr!("undercurlPosition")).ok(),
-            program,
-        })
+        Ok(Self { program })
     }
 
     fn id(&self) -> GLuint {

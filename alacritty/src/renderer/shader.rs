@@ -56,16 +56,6 @@ impl ShaderProgram {
         Ok(program)
     }
 
-    /// Get uniform location by name. Panic if failed.
-    pub fn get_uniform_location(&self, name: &'static CStr) -> Result<GLint, ShaderError> {
-        // This call doesn't require `UseProgram`.
-        let ret = unsafe { gl::GetUniformLocation(self.id(), name.as_ptr()) };
-        if ret == -1 {
-            return Err(ShaderError::Uniform(name));
-        }
-        Ok(ret)
-    }
-
     /// Get the shader program id.
     pub fn id(&self) -> GLuint {
         self.0
