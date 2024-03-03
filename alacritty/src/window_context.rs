@@ -8,15 +8,12 @@ use std::sync::Arc;
 
 #[cfg(all(feature = "x11", not(any(target_os = "macos", windows))))]
 use glutin::platform::x11::X11GlConfigExt;
-use log::info;
 use raw_window_handle::HasRawDisplayHandle;
 use winit::event::{Event as WinitEvent, WindowEvent};
 use winit::event_loop::{EventLoopProxy, EventLoopWindowTarget};
 use winit::window::WindowId;
 
-use alacritty_terminal::event::Event as TerminalEvent;
-use alacritty_terminal::event_loop::{EventLoop as PtyEventLoop, Msg};
-use alacritty_terminal::grid::Dimensions;
+use alacritty_terminal::event_loop::EventLoop as PtyEventLoop;
 use alacritty_terminal::sync::FairMutex;
 use alacritty_terminal::term::Term;
 use alacritty_terminal::tty;
@@ -89,14 +86,13 @@ impl WindowContext {
 
         let display = Display::new(window, gl_context, &config, false)?;
 
-        Self::new(display, config, options, proxy)
+        Self::new(display, config, proxy)
     }
 
     /// Create a new terminal window context.
     fn new(
         display: Display,
         config: Rc<UiConfig>,
-        options: WindowOptions,
         proxy: EventLoopProxy<Event>,
     ) -> Result<Self, Box<dyn Error>> {
         let event_proxy = EventProxy::new(proxy, display.window.id());
@@ -222,7 +218,7 @@ impl WindowContext {
 
         // Process DisplayUpdate events.
         if self.display.pending_update.dirty {
-            Self::submit_display_update(&mut terminal, &mut self.display, &self.config);
+            Self::submit_display_update(&mut self.display, &self.config);
             self.dirty = true;
         }
 
@@ -243,11 +239,7 @@ impl WindowContext {
     }
 
     /// Submit the pending changes to the `Display`.
-    fn submit_display_update(
-        terminal: &mut Term<EventProxy>,
-        display: &mut Display,
-        config: &UiConfig,
-    ) {
-        display.handle_update(terminal, config);
+    fn submit_display_update(display: &mut Display, config: &UiConfig) {
+        display.handle_update(config);
     }
 }

@@ -19,7 +19,7 @@ use winit::dpi::PhysicalSize;
 
 use crossfont::{self, Rasterize, Rasterizer, Size as FontSize};
 
-use alacritty_terminal::event::{EventListener, OnResize, WindowSize};
+use alacritty_terminal::event::WindowSize;
 use alacritty_terminal::grid::Dimensions as TermDimensions;
 use alacritty_terminal::term::{Term, MIN_COLUMNS, MIN_SCREEN_LINES};
 
@@ -275,21 +275,8 @@ impl DisplayUpdate {
         self.dimensions
     }
 
-    pub fn font(&self) -> Option<&Font> {
-        self.font.as_ref()
-    }
-
-    pub fn cursor_dirty(&self) -> bool {
-        self.cursor_dirty
-    }
-
     pub fn set_dimensions(&mut self, dimensions: PhysicalSize<u32>) {
         self.dimensions = Some(dimensions);
-        self.dirty = true;
-    }
-
-    pub fn set_font(&mut self, font: Font) {
-        self.font = Some(font);
         self.dirty = true;
     }
 }
@@ -367,12 +354,6 @@ impl Display {
 
         // Create renderer.
         let mut renderer = Renderer::new(&context, config.debug.renderer)?;
-
-        // Load font common glyphs to accelerate rendering.
-        debug!("Filling glyph cache with common glyphs");
-        renderer.with_loader(|mut api| {
-            glyph_cache.reset_glyph_cache(&mut api);
-        });
 
         let padding = config.window.padding(window.scale_factor as f32);
         let viewport_size = window.inner_size();
@@ -473,54 +454,15 @@ impl Display {
         }
     }
 
-    /// Update font size and cell dimensions.
-    ///
-    /// This will return a tuple of the cell width and height.
-    fn update_font_size(
-        glyph_cache: &mut GlyphCache,
-        config: &UiConfig,
-        font: &Font,
-    ) -> (f32, f32) {
-        let _ = glyph_cache.update_font_size(font);
-
-        // Compute new cell sizes.
-        compute_cell_size(config, &glyph_cache.font_metrics())
-    }
-
-    /// Reset glyph cache.
-    fn reset_glyph_cache(&mut self) {
-        let cache = &mut self.glyph_cache;
-        self.renderer.with_loader(|mut api| {
-            cache.reset_glyph_cache(&mut api);
-        });
-    }
-
     // XXX: this function must not call to any `OpenGL` related tasks. Renderer updates are
     // performed in [`Self::process_renderer_update`] right before drawing.
     //
     /// Process update events.
-    pub fn handle_update<T>(&mut self, terminal: &mut Term<T>, config: &UiConfig)
-    where
-        T: EventListener,
-    {
+    pub fn handle_update(&mut self, config: &UiConfig) {
         let pending_update = mem::take(&mut self.pending_update);
 
         let (mut cell_width, mut cell_height) =
             (self.size_info.cell_width(), self.size_info.cell_height());
-
-        if pending_update.font().is_some() || pending_update.cursor_dirty() {
-            let renderer_update = self.pending_renderer_update.get_or_insert(Default::default());
-            renderer_update.clear_font_cache = true
-        }
-
-        // Update font size and cell dimensions.
-        if let Some(font) = pending_update.font() {
-            let cell_dimensions = Self::update_font_size(&mut self.glyph_cache, config, font);
-            cell_width = cell_dimensions.0;
-            cell_height = cell_dimensions.1;
-
-            info!("Cell size: {} x {}", cell_width, cell_height);
-        }
 
         let (mut width, mut height) = (self.size_info.width(), self.size_info.height());
         if let Some(dimensions) = pending_update.dimensions() {
@@ -575,14 +517,7 @@ impl Display {
         // Ensure we're modifying the correct OpenGL context.
         self.make_current();
 
-        if renderer_update.clear_font_cache {
-            self.reset_glyph_cache();
-        }
-
         self.renderer.resize(&self.size_info);
-
-        info!("Padding: {} x {}", self.size_info.padding_x(), self.size_info.padding_y());
-        info!("Width: {}, Height: {}", self.size_info.width(), self.size_info.height());
     }
 
     /// Draw the screen.
@@ -690,9 +625,6 @@ pub struct Preedit {
 pub struct RendererUpdate {
     /// Should resize the window.
     resize: bool,
-
-    /// Clear font caches.
-    clear_font_cache: bool,
 }
 
 /// Struct for safe in-place replacement.

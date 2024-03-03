@@ -1,12 +1,8 @@
 use std::path::PathBuf;
 
 use clap::{ArgAction, Args, Parser, ValueHint};
-use log::{self, error};
 use serde::{Deserialize, Serialize};
 
-use alacritty_terminal::tty::Options as PtyOptions;
-
-use crate::config::ui_config::Program;
 use crate::config::window::{Class, Identity};
 
 /// CLI options for the main Alacritty executable.

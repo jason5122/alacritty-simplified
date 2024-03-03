@@ -6,7 +6,6 @@ use std::fmt::Debug;
 #[cfg(not(windows))]
 use std::os::unix::io::RawFd;
 use std::rc::Rc;
-use std::{f32, mem};
 
 use ahash::RandomState;
 use glutin::display::{Display as GlutinDisplay, GetGlDisplay};
@@ -17,8 +16,7 @@ use winit::event_loop::{
 };
 use winit::window::WindowId;
 
-use alacritty_terminal::event::{Event as TerminalEvent, EventListener, Notify};
-use alacritty_terminal::event_loop::Notifier;
+use alacritty_terminal::event::{Event as TerminalEvent, EventListener};
 use alacritty_terminal::grid::Scroll;
 use alacritty_terminal::term::Term;
 
@@ -26,7 +24,7 @@ use crate::cli::WindowOptions;
 use crate::config::UiConfig;
 use crate::display::window::Window;
 use crate::display::Display;
-use crate::input::{self, ActionContext as _};
+use crate::input::{self};
 use crate::scheduler::Scheduler;
 use crate::window_context::WindowContext;
 
@@ -98,19 +96,6 @@ impl input::Processor<EventProxy, ActionContext<'_, EventProxy>> {
             WinitEvent::WindowEvent { event, .. } => {
                 match event {
                     WindowEvent::CloseRequested => self.ctx.terminal.exit(),
-                    WindowEvent::ScaleFactorChanged { scale_factor, .. } => {
-                        let old_scale_factor =
-                            mem::replace(&mut self.ctx.window().scale_factor, scale_factor);
-
-                        let display_update_pending = &mut self.ctx.display.pending_update;
-
-                        // Rescale font size for the new factor.
-                        let font_scale = scale_factor as f32 / old_scale_factor as f32;
-                        self.ctx.display.font_size = self.ctx.display.font_size.scale(font_scale);
-
-                        let font = self.ctx.config.font.clone();
-                        display_update_pending.set_font(font.with_size(self.ctx.display.font_size));
-                    },
                     WindowEvent::Resized(size) => {
                         // Ignore resize events to zero in any dimension, to avoid issues with Winit
                         // and the ConPTY. A 0x0 resize will also occur when the window is minimized
@@ -121,6 +106,7 @@ impl input::Processor<EventProxy, ActionContext<'_, EventProxy>> {
 
                         self.ctx.display.pending_update.set_dimensions(size);
                     },
+                    WindowEvent::ScaleFactorChanged { scale_factor: _, .. } => {},
                     WindowEvent::KeyboardInput { event: _, is_synthetic: false, .. } => (),
                     WindowEvent::ModifiersChanged(_) => (),
                     WindowEvent::MouseInput { state: _, button: _, .. } => (),
