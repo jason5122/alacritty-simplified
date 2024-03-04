@@ -5,7 +5,6 @@ mod app;
 mod app_delegate;
 mod app_state;
 mod appkit;
-mod event;
 mod event_loop;
 mod ffi;
 mod menu;
@@ -18,14 +17,12 @@ mod window_delegate;
 use std::fmt;
 
 pub(crate) use self::{
-    event::KeyEventExtra,
     event_loop::{
         EventLoop, EventLoopProxy, EventLoopWindowTarget, PlatformSpecificEventLoopAttributes,
     },
     monitor::{MonitorHandle, VideoMode},
     window::{PlatformSpecificWindowBuilderAttributes, WindowId},
 };
-use crate::event::DeviceId as RootDeviceId;
 
 pub(crate) use self::window::Window;
 pub(crate) use crate::icon::NoIcon as PlatformIcon;
@@ -39,9 +36,6 @@ impl DeviceId {
         DeviceId
     }
 }
-
-// Constant device ID; to be removed when if backend is updated to report real device IDs.
-pub(crate) const DEVICE_ID: RootDeviceId = RootDeviceId(DeviceId);
 
 #[derive(Debug)]
 pub enum OsError {

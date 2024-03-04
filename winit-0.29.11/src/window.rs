@@ -1159,86 +1159,6 @@ impl Window {
             .maybe_queue_on_main(move |w| w.set_window_icon(window_icon))
     }
 
-    /// Set the IME cursor editing area, where the `position` is the top left corner of that area
-    /// and `size` is the size of this area starting from the position. An example of such area
-    /// could be a input field in the UI or line in the editor.
-    ///
-    /// The windowing system could place a candidate box close to that area, but try to not obscure
-    /// the specified area, so the user input to it stays visible.
-    ///
-    /// The candidate box is the window / popup / overlay that allows you to select the desired
-    /// characters. The look of this box may differ between input devices, even on the same
-    /// platform.
-    ///
-    /// (Apple's official term is "candidate window", see their [chinese] and [japanese] guides).
-    ///
-    /// ## Example
-    ///
-    /// ```no_run
-    /// # use winit::dpi::{LogicalPosition, PhysicalPosition, LogicalSize, PhysicalSize};
-    /// # use winit::event_loop::EventLoop;
-    /// # use winit::window::Window;
-    /// # let mut event_loop = EventLoop::new().unwrap();
-    /// # let window = Window::new(&event_loop).unwrap();
-    /// // Specify the position in logical dimensions like this:
-    /// window.set_ime_cursor_area(LogicalPosition::new(400.0, 200.0), LogicalSize::new(100, 100));
-    ///
-    /// // Or specify the position in physical dimensions like this:
-    /// window.set_ime_cursor_area(PhysicalPosition::new(400, 200), PhysicalSize::new(100, 100));
-    /// ```
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **X11:** - area is not supported, only position.
-    /// - **iOS / Android / Web / Orbital:** Unsupported.
-    ///
-    /// [chinese]: https://support.apple.com/guide/chinese-input-method/use-the-candidate-window-cim12992/104/mac/12.0
-    /// [japanese]: https://support.apple.com/guide/japanese-input-method/use-the-candidate-window-jpim10262/6.3/mac/12.0
-    #[inline]
-    pub fn set_ime_cursor_area<P: Into<Position>, S: Into<Size>>(&self, position: P, size: S) {
-        let position = position.into();
-        let size = size.into();
-        self.window
-            .maybe_queue_on_main(move |w| w.set_ime_cursor_area(position, size))
-    }
-
-    /// Sets whether the window should get IME events
-    ///
-    /// When IME is allowed, the window will receive [`Ime`] events, and during the
-    /// preedit phase the window will NOT get [`KeyboardInput`] events. The window
-    /// should allow IME while it is expecting text input.
-    ///
-    /// When IME is not allowed, the window won't receive [`Ime`] events, and will
-    /// receive [`KeyboardInput`] events for every keypress instead. Not allowing
-    /// IME is useful for games for example.
-    ///
-    /// IME is **not** allowed by default.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **macOS:** IME must be enabled to receive text-input where dead-key sequences are combined.
-    /// - **iOS / Android / Web / Orbital:** Unsupported.
-    /// - **X11**: Enabling IME will disable dead keys reporting during compose.
-    ///
-    /// [`Ime`]: crate::event::WindowEvent::Ime
-    /// [`KeyboardInput`]: crate::event::WindowEvent::KeyboardInput
-    #[inline]
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        self.window
-            .maybe_queue_on_main(move |w| w.set_ime_allowed(allowed))
-    }
-
-    /// Sets the IME purpose for the window using [`ImePurpose`].
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **iOS / Android / Web / Windows / X11 / macOS / Orbital:** Unsupported.
-    #[inline]
-    pub fn set_ime_purpose(&self, purpose: ImePurpose) {
-        self.window
-            .maybe_queue_on_main(move |w| w.set_ime_purpose(purpose))
-    }
-
     /// Brings the window to the front and sets input focus. Has no effect if the window is
     /// already in focus, minimized, or not visible.
     ///
@@ -1335,81 +1255,6 @@ impl Window {
 
 /// Cursor functions.
 impl Window {
-    /// Modifies the cursor icon of the window.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **iOS / Android / Orbital:** Unsupported.
-    #[inline]
-    pub fn set_cursor_icon(&self, cursor: CursorIcon) {
-        self.window
-            .maybe_queue_on_main(move |w| w.set_cursor_icon(cursor))
-    }
-
-    /// Changes the position of the cursor in window coordinates.
-    ///
-    /// ```no_run
-    /// # use winit::dpi::{LogicalPosition, PhysicalPosition};
-    /// # use winit::event_loop::EventLoop;
-    /// # use winit::window::Window;
-    /// # let mut event_loop = EventLoop::new().unwrap();
-    /// # let window = Window::new(&event_loop).unwrap();
-    /// // Specify the position in logical dimensions like this:
-    /// window.set_cursor_position(LogicalPosition::new(400.0, 200.0));
-    ///
-    /// // Or specify the position in physical dimensions like this:
-    /// window.set_cursor_position(PhysicalPosition::new(400, 200));
-    /// ```
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **Wayland**: Cursor must be in [`CursorGrabMode::Locked`].
-    /// - **iOS / Android / Web / Orbital:** Always returns an [`ExternalError::NotSupported`].
-    #[inline]
-    pub fn set_cursor_position<P: Into<Position>>(&self, position: P) -> Result<(), ExternalError> {
-        let position = position.into();
-        self.window
-            .maybe_wait_on_main(|w| w.set_cursor_position(position))
-    }
-
-    /// Set grabbing [mode](CursorGrabMode) on the cursor preventing it from leaving the window.
-    ///
-    /// # Example
-    ///
-    /// First try confining the cursor, and if that fails, try locking it instead.
-    ///
-    /// ```no_run
-    /// # use winit::event_loop::EventLoop;
-    /// # use winit::window::{CursorGrabMode, Window};
-    /// # let mut event_loop = EventLoop::new().unwrap();
-    /// # let window = Window::new(&event_loop).unwrap();
-    /// window.set_cursor_grab(CursorGrabMode::Confined)
-    ///             .or_else(|_e| window.set_cursor_grab(CursorGrabMode::Locked))
-    ///             .unwrap();
-    /// ```
-    #[inline]
-    pub fn set_cursor_grab(&self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        self.window.maybe_wait_on_main(|w| w.set_cursor_grab(mode))
-    }
-
-    /// Modifies the cursor's visibility.
-    ///
-    /// If `false`, this will hide the cursor. If `true`, this will show the cursor.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **Windows:** The cursor is only hidden within the confines of the window.
-    /// - **X11:** The cursor is only hidden within the confines of the window.
-    /// - **Wayland:** The cursor is only hidden within the confines of the window.
-    /// - **macOS:** The cursor is hidden as long as the window has input focus, even if the cursor is
-    ///   outside of the window.
-    /// - **iOS / Android:** Unsupported.
-    #[inline]
-    pub fn set_cursor_visible(&self, visible: bool) {
-        self.window
-            .maybe_queue_on_main(move |w| w.set_cursor_visible(visible))
-    }
-
     /// Moves the window with the left mouse button until the button is released.
     ///
     /// There's no guarantee that this will work unless the left mouse button was pressed
@@ -1454,20 +1299,6 @@ impl Window {
         let position = position.into();
         self.window
             .maybe_queue_on_main(move |w| w.show_window_menu(position))
-    }
-
-    /// Modifies whether the window catches cursor events.
-    ///
-    /// If `true`, the window will catch the cursor events. If `false`, events are passed through
-    /// the window such that any other window behind it receives them. By default hittest is enabled.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **iOS / Android / Web / Orbital:** Always returns an [`ExternalError::NotSupported`].
-    #[inline]
-    pub fn set_cursor_hittest(&self, hittest: bool) -> Result<(), ExternalError> {
-        self.window
-            .maybe_wait_on_main(|w| w.set_cursor_hittest(hittest))
     }
 }
 

@@ -828,57 +828,9 @@ impl WinitWindow {
         buttons
     }
 
-    pub fn set_cursor_icon(&self, icon: CursorIcon) {
-        let view = self.view();
-        view.set_cursor_icon(NSCursor::from_icon(icon));
-        self.invalidateCursorRectsForView(&view);
-    }
-
-    #[inline]
-    pub fn set_cursor_grab(&self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        let associate_mouse_cursor = match mode {
-            CursorGrabMode::Locked => false,
-            CursorGrabMode::None => true,
-            CursorGrabMode::Confined => {
-                return Err(ExternalError::NotSupported(NotSupportedError::new()))
-            }
-        };
-
-        // TODO: Do this for real https://stackoverflow.com/a/40922095/5435443
-        CGDisplay::associate_mouse_and_mouse_cursor_position(associate_mouse_cursor)
-            .map_err(|status| ExternalError::Os(os_error!(OsError::CGError(status))))
-    }
-
-    #[inline]
-    pub fn set_cursor_visible(&self, visible: bool) {
-        let view = self.view();
-        let state_changed = view.set_cursor_visible(visible);
-        if state_changed {
-            self.invalidateCursorRectsForView(&view);
-        }
-    }
-
     #[inline]
     pub fn scale_factor(&self) -> f64 {
         self.backingScaleFactor() as f64
-    }
-
-    #[inline]
-    pub fn set_cursor_position(&self, cursor_position: Position) -> Result<(), ExternalError> {
-        let physical_window_position = self.inner_position().unwrap();
-        let scale_factor = self.scale_factor();
-        let window_position = physical_window_position.to_logical::<CGFloat>(scale_factor);
-        let logical_cursor_position = cursor_position.to_logical::<CGFloat>(scale_factor);
-        let point = CGPoint {
-            x: logical_cursor_position.x + window_position.x,
-            y: logical_cursor_position.y + window_position.y,
-        };
-        CGDisplay::warp_mouse_cursor_position(point)
-            .map_err(|e| ExternalError::Os(os_error!(OsError::CGError(e))))?;
-        CGDisplay::associate_mouse_and_mouse_cursor_position(true)
-            .map_err(|e| ExternalError::Os(os_error!(OsError::CGError(e))))?;
-
-        Ok(())
     }
 
     #[inline]
@@ -895,12 +847,6 @@ impl WinitWindow {
 
     #[inline]
     pub fn show_window_menu(&self, _position: Position) {}
-
-    #[inline]
-    pub fn set_cursor_hittest(&self, hittest: bool) -> Result<(), ExternalError> {
-        self.setIgnoresMouseEvents(!hittest);
-        Ok(())
-    }
 
     pub(crate) fn is_zoomed(&self) -> bool {
         // because `isZoomed` doesn't work if the window's borderless,
@@ -1290,22 +1236,6 @@ impl WinitWindow {
         // have anything to do with `set_window_icon`.
         // https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/WinPanel/Tasks/SettingWindowTitle.html
     }
-
-    #[inline]
-    pub fn set_ime_cursor_area(&self, spot: Position, size: Size) {
-        let scale_factor = self.scale_factor();
-        let logical_spot = spot.to_logical(scale_factor);
-        let size = size.to_logical(scale_factor);
-        self.view().set_ime_cursor_area(logical_spot, size);
-    }
-
-    #[inline]
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        self.view().set_ime_allowed(allowed);
-    }
-
-    #[inline]
-    pub fn set_ime_purpose(&self, _purpose: ImePurpose) {}
 
     #[inline]
     pub fn focus_window(&self) {

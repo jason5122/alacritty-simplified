@@ -636,37 +636,6 @@ impl Window {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct KeyEventExtra {
-    pub key_without_modifiers: Key,
-    pub text_with_all_modifiers: Option<SmolStr>,
-}
-
-impl KeyEventExtModifierSupplement for KeyEvent {
-    #[inline]
-    fn text_with_all_modifiers(&self) -> Option<&str> {
-        self.platform_specific
-            .text_with_all_modifiers
-            .as_ref()
-            .map(|s| s.as_str())
-    }
-
-    #[inline]
-    fn key_without_modifiers(&self) -> Key {
-        self.platform_specific.key_without_modifiers.clone()
-    }
-}
-
-impl PhysicalKeyExtScancode for PhysicalKey {
-    fn from_scancode(scancode: u32) -> PhysicalKey {
-        common::xkb::scancode_to_keycode(scancode)
-    }
-
-    fn to_scancode(self) -> Option<u32> {
-        common::xkb::physicalkey_to_scancode(self)
-    }
-}
-
 /// Hooks for X11 errors.
 #[cfg(x11_platform)]
 pub(crate) static mut XLIB_ERROR_HOOKS: Lazy<Mutex<Vec<XlibErrorHook>>> =
