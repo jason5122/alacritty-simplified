@@ -36,9 +36,6 @@ use crate::platform_impl::wayland::types::kwin_blur::KWinBlurManager;
 use crate::platform_impl::WindowId;
 use crate::window::{CursorGrabMode, CursorIcon, ImePurpose, ResizeDirection, Theme};
 
-use crate::platform_impl::wayland::seat::{
-    PointerConstraintsState, WinitPointerData, WinitPointerDataExt, ZwpTextInputV3Ext,
-};
 use crate::platform_impl::wayland::state::{WindowCompositorUpdate, WinitState};
 
 #[cfg(feature = "sctk-adwaita")]
@@ -63,17 +60,11 @@ pub struct WindowState {
     /// The last received configure.
     pub last_configure: Option<WindowConfigure>,
 
-    /// The pointers observed on the window.
-    pub pointers: Vec<Weak<ThemedPointer<WinitPointerData>>>,
-
     /// Cursor icon.
     pub cursor_icon: CursorIcon,
 
     /// Wether the cursor is visible.
     pub cursor_visible: bool,
-
-    /// Pointer constraints to lock/confine pointer.
-    pub pointer_constraints: Option<Arc<PointerConstraintsState>>,
 
     /// Queue handle.
     pub queue_handle: QueueHandle<WinitState>,
@@ -163,7 +154,6 @@ impl WindowState {
         theme: Option<Theme>,
     ) -> Self {
         let compositor = winit_state.compositor_state.clone();
-        let pointer_constraints = winit_state.pointer_constraints.clone();
         let viewport = winit_state
             .viewporter_state
             .as_ref()
@@ -193,8 +183,6 @@ impl WindowState {
             last_configure: None,
             max_inner_size: None,
             min_inner_size: MIN_WINDOW_SIZE,
-            pointer_constraints,
-            pointers: Default::default(),
             queue_handle: queue_handle.clone(),
             resizable: true,
             scale_factor: 1.,
@@ -209,20 +197,6 @@ impl WindowState {
             viewport,
             window,
         }
-    }
-
-    /// Apply closure on the given pointer.
-    fn apply_on_poiner<F: Fn(&ThemedPointer<WinitPointerData>, &WinitPointerData)>(
-        &self,
-        callback: F,
-    ) {
-        self.pointers
-            .iter()
-            .filter_map(Weak::upgrade)
-            .for_each(|pointer| {
-                let data = pointer.pointer().winit_data();
-                callback(pointer.as_ref(), data);
-            })
     }
 
     /// Get the current state of the frame callback.
@@ -391,33 +365,6 @@ impl WindowState {
         !(configure.is_maximized() || configure.is_fullscreen() || configure.is_tiled())
     }
 
-    /// Start interacting drag resize.
-    pub fn drag_resize_window(&self, direction: ResizeDirection) -> Result<(), ExternalError> {
-        let xdg_toplevel = self.window.xdg_toplevel();
-
-        // TODO(kchibisov) handle touch serials.
-        self.apply_on_poiner(|_, data| {
-            let serial = data.latest_button_serial();
-            let seat = data.seat();
-            xdg_toplevel.resize(seat, serial, direction.into());
-        });
-
-        Ok(())
-    }
-
-    /// Start the window drag.
-    pub fn drag_window(&self) -> Result<(), ExternalError> {
-        let xdg_toplevel = self.window.xdg_toplevel();
-        // TODO(kchibisov) handle touch serials.
-        self.apply_on_poiner(|_, data| {
-            let serial = data.latest_button_serial();
-            let seat = data.seat();
-            xdg_toplevel._move(seat, serial);
-        });
-
-        Ok(())
-    }
-
     /// Tells whether the window should be closed.
     #[allow(clippy::too_many_arguments)]
     pub fn frame_click(
@@ -571,29 +518,6 @@ impl WindowState {
             .unwrap_or(self.size)
     }
 
-    /// Register pointer on the top-level.
-    pub fn pointer_entered(&mut self, added: Weak<ThemedPointer<WinitPointerData>>) {
-        self.pointers.push(added);
-        self.reload_cursor_style();
-
-        let mode = self.cursor_grab_mode.user_grab_mode;
-        let _ = self.set_cursor_grab_inner(mode);
-    }
-
-    /// Pointer has left the top-level.
-    pub fn pointer_left(&mut self, removed: Weak<ThemedPointer<WinitPointerData>>) {
-        let mut new_pointers = Vec::new();
-        for pointer in self.pointers.drain(..) {
-            if let Some(pointer) = pointer.upgrade() {
-                if pointer.pointer() != removed.upgrade().unwrap().pointer() {
-                    new_pointers.push(Arc::downgrade(&pointer));
-                }
-            }
-        }
-
-        self.pointers = new_pointers;
-    }
-
     /// Refresh the decorations frame if it's present returning whether the client should redraw.
     pub fn refresh_frame(&mut self) -> bool {
         if let Some(frame) = self.frame.as_mut() {
@@ -603,15 +527,6 @@ impl WindowState {
         }
 
         false
-    }
-
-    /// Reload the cursor style on the given window.
-    pub fn reload_cursor_style(&mut self) {
-        if self.cursor_visible {
-            self.set_cursor(self.cursor_icon);
-        } else {
-            self.set_cursor_visible(self.cursor_visible);
-        }
     }
 
     /// Reissue the transparency hint to the compositor.
@@ -693,23 +608,6 @@ impl WindowState {
         self.scale_factor
     }
 
-    /// Set the cursor icon.
-    ///
-    /// Providing `None` will hide the cursor.
-    pub fn set_cursor(&mut self, cursor_icon: CursorIcon) {
-        self.cursor_icon = cursor_icon;
-
-        if !self.cursor_visible {
-            return;
-        }
-
-        self.apply_on_poiner(|pointer, _| {
-            if pointer.set_cursor(&self.connection, cursor_icon).is_err() {
-                warn!("Failed to set cursor to {:?}", cursor_icon);
-            }
-        })
-    }
-
     /// Set maximum inner window size.
     pub fn set_min_inner_size(&mut self, size: Option<LogicalSize<u32>>) {
         // Ensure that the window has the right minimum size.
@@ -756,104 +654,10 @@ impl WindowState {
         self.theme
     }
 
-    /// Set the cursor grabbing state on the top-level.
-    pub fn set_cursor_grab(&mut self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        // Replace the user grabbing mode.
-        self.cursor_grab_mode.user_grab_mode = mode;
-        self.set_cursor_grab_inner(mode)
-    }
-
     /// Reload the hints for minimum and maximum sizes.
     pub fn reload_min_max_hints(&mut self) {
         self.set_min_inner_size(Some(self.min_inner_size));
         self.set_max_inner_size(self.max_inner_size);
-    }
-
-    /// Set the grabbing state on the surface.
-    fn set_cursor_grab_inner(&mut self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        let pointer_constraints = match self.pointer_constraints.as_ref() {
-            Some(pointer_constraints) => pointer_constraints,
-            None if mode == CursorGrabMode::None => return Ok(()),
-            None => return Err(ExternalError::NotSupported(NotSupportedError::new())),
-        };
-
-        // Replace the current mode.
-        let old_mode = std::mem::replace(&mut self.cursor_grab_mode.current_grab_mode, mode);
-
-        match old_mode {
-            CursorGrabMode::None => (),
-            CursorGrabMode::Confined => self.apply_on_poiner(|_, data| {
-                data.unconfine_pointer();
-            }),
-            CursorGrabMode::Locked => {
-                self.apply_on_poiner(|_, data| data.unlock_pointer());
-            }
-        }
-
-        let surface = self.window.wl_surface();
-        match mode {
-            CursorGrabMode::Locked => self.apply_on_poiner(|pointer, data| {
-                let pointer = pointer.pointer();
-                data.lock_pointer(pointer_constraints, surface, pointer, &self.queue_handle)
-            }),
-            CursorGrabMode::Confined => self.apply_on_poiner(|pointer, data| {
-                let pointer = pointer.pointer();
-                data.confine_pointer(pointer_constraints, surface, pointer, &self.queue_handle)
-            }),
-            CursorGrabMode::None => {
-                // Current lock/confine was already removed.
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn show_window_menu(&self, position: LogicalPosition<u32>) {
-        // TODO(kchibisov) handle touch serials.
-        self.apply_on_poiner(|_, data| {
-            let serial = data.latest_button_serial();
-            let seat = data.seat();
-            self.window.show_window_menu(seat, serial, position.into());
-        });
-    }
-
-    /// Set the position of the cursor.
-    pub fn set_cursor_position(&self, position: LogicalPosition<f64>) -> Result<(), ExternalError> {
-        if self.pointer_constraints.is_none() {
-            return Err(ExternalError::NotSupported(NotSupportedError::new()));
-        }
-
-        // Positon can be set only for locked cursor.
-        if self.cursor_grab_mode.current_grab_mode != CursorGrabMode::Locked {
-            return Err(ExternalError::Os(os_error!(
-                crate::platform_impl::OsError::Misc(
-                    "cursor position can be set only for locked cursor."
-                )
-            )));
-        }
-
-        self.apply_on_poiner(|_, data| {
-            data.set_locked_cursor_position(position.x, position.y);
-        });
-
-        Ok(())
-    }
-
-    /// Set the visibility state of the cursor.
-    pub fn set_cursor_visible(&mut self, cursor_visible: bool) {
-        self.cursor_visible = cursor_visible;
-
-        if self.cursor_visible {
-            self.set_cursor(self.cursor_icon);
-        } else {
-            for pointer in self.pointers.iter().filter_map(|pointer| pointer.upgrade()) {
-                let latest_enter_serial = pointer.pointer().winit_data().latest_enter_serial();
-
-                pointer
-                    .pointer()
-                    .set_cursor(latest_enter_serial, None, 0, 0);
-            }
-        }
     }
 
     /// Whether show or hide client side decorations.
@@ -898,53 +702,6 @@ impl WindowState {
     #[inline]
     pub fn remove_seat_focus(&mut self, seat: &ObjectId) {
         self.seat_focus.remove(seat);
-    }
-
-    /// Returns `true` if the requested state was applied.
-    pub fn set_ime_allowed(&mut self, allowed: bool) -> bool {
-        self.ime_allowed = allowed;
-
-        let mut applied = false;
-        for text_input in &self.text_inputs {
-            applied = true;
-            if allowed {
-                text_input.enable();
-                text_input.set_content_type_by_purpose(self.ime_purpose);
-            } else {
-                text_input.disable();
-            }
-            text_input.commit();
-        }
-
-        applied
-    }
-
-    /// Set the IME position.
-    pub fn set_ime_cursor_area(&self, position: LogicalPosition<u32>, size: LogicalSize<u32>) {
-        // FIXME: This won't fly unless user will have a way to request IME window per seat, since
-        // the ime windows will be overlapping, but winit doesn't expose API to specify for
-        // which seat we're setting IME position.
-        let (x, y) = (position.x as i32, position.y as i32);
-        let (width, height) = (size.width as i32, size.height as i32);
-        for text_input in self.text_inputs.iter() {
-            text_input.set_cursor_rectangle(x, y, width, height);
-            text_input.commit();
-        }
-    }
-
-    /// Set the IME purpose.
-    pub fn set_ime_purpose(&mut self, purpose: ImePurpose) {
-        self.ime_purpose = purpose;
-
-        for text_input in &self.text_inputs {
-            text_input.set_content_type_by_purpose(purpose);
-            text_input.commit();
-        }
-    }
-
-    /// Get the IME purpose.
-    pub fn ime_purpose(&self) -> ImePurpose {
-        self.ime_purpose
     }
 
     /// Set the scale factor for the given window.

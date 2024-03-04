@@ -636,22 +636,6 @@ impl Window {
     pub fn pre_present_notify(&self) {
         self.window.maybe_queue_on_main(|w| w.pre_present_notify());
     }
-
-    /// Reset the dead key state of the keyboard.
-    ///
-    /// This is useful when a dead key is bound to trigger an action. Then
-    /// this function can be called to reset the dead key state so that
-    /// follow-up text input won't be affected by the dead key.
-    ///
-    /// ## Platform-specific
-    /// - **Web, macOS:** Does nothing
-    // ---------------------------
-    // Developers' Note: If this cannot be implemented on every desktop platform
-    // at least, then this function should be provided through a platform specific
-    // extension trait
-    pub fn reset_dead_keys(&self) {
-        self.window.maybe_queue_on_main(|w| w.reset_dead_keys())
-    }
 }
 
 /// Position and size functions.
@@ -1250,55 +1234,6 @@ impl Window {
     #[inline]
     pub fn title(&self) -> String {
         self.window.maybe_wait_on_main(|w| w.title())
-    }
-}
-
-/// Cursor functions.
-impl Window {
-    /// Moves the window with the left mouse button until the button is released.
-    ///
-    /// There's no guarantee that this will work unless the left mouse button was pressed
-    /// immediately before this function is called.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **X11:** Un-grabs the cursor.
-    /// - **Wayland:** Requires the cursor to be inside the window to be dragged.
-    /// - **macOS:** May prevent the button release event to be triggered.
-    /// - **iOS / Android / Web:** Always returns an [`ExternalError::NotSupported`].
-    #[inline]
-    pub fn drag_window(&self) -> Result<(), ExternalError> {
-        self.window.maybe_wait_on_main(|w| w.drag_window())
-    }
-
-    /// Resizes the window with the left mouse button until the button is released.
-    ///
-    /// There's no guarantee that this will work unless the left mouse button was pressed
-    /// immediately before this function is called.
-    ///
-    /// ## Platform-specific
-    ///
-    /// - **macOS:** Always returns an [`ExternalError::NotSupported`]
-    /// - **iOS / Android / Web:** Always returns an [`ExternalError::NotSupported`].
-    #[inline]
-    pub fn drag_resize_window(&self, direction: ResizeDirection) -> Result<(), ExternalError> {
-        self.window
-            .maybe_wait_on_main(|w| w.drag_resize_window(direction))
-    }
-
-    /// Show [window menu] at a specified position .
-    ///
-    /// This is the context menu that is normally shown when interacting with
-    /// the title bar. This is useful when implementing custom decorations.
-    ///
-    /// ## Platform-specific
-    /// **Android / iOS / macOS / Orbital / Wayland / Web / X11:** Unsupported.
-    ///
-    /// [window menu]: https://en.wikipedia.org/wiki/Common_menus_in_Microsoft_Windows#System_menu
-    pub fn show_window_menu(&self, position: impl Into<Position>) {
-        let position = position.into();
-        self.window
-            .maybe_queue_on_main(move |w| w.show_window_menu(position))
     }
 }
 

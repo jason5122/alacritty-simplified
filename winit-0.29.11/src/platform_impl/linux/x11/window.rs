@@ -38,10 +38,7 @@ use crate::{
     },
 };
 
-use super::{
-    ffi, util, CookieResultExt, EventLoopWindowTarget, ImeRequest, ImeSender, VoidCookie, WindowId,
-    XConnection,
-};
+use super::{ffi, util, CookieResultExt, EventLoopWindowTarget, VoidCookie, WindowId, XConnection};
 
 #[derive(Debug)]
 pub struct SharedState {
@@ -130,7 +127,6 @@ pub struct UnownedWindow {
     cursor_grabbed_mode: Mutex<CursorGrabMode>,
     #[allow(clippy::mutex_atomic)]
     cursor_visible: Mutex<bool>,
-    ime_sender: Mutex<ImeSender>,
     pub shared_state: Mutex<SharedState>,
     redraw_sender: WakeSender<WindowId>,
     activation_sender: WakeSender<super::ActivationToken>,
@@ -358,7 +354,6 @@ impl UnownedWindow {
             cursor: Default::default(),
             cursor_grabbed_mode: Mutex::new(CursorGrabMode::None),
             cursor_visible: Mutex::new(true),
-            ime_sender: Mutex::new(event_loop.ime_sender.clone()),
             shared_state: SharedState::new(guessed_monitor, &window_attrs),
             redraw_sender: event_loop.redraw_sender.clone(),
             activation_sender: event_loop.activation_sender.clone(),
@@ -540,14 +535,6 @@ impl UnownedWindow {
                 | xinput::XIEventMask::TOUCH_END;
             leap!(xconn.select_xinput_events(window.xwindow, super::ALL_MASTER_DEVICES, mask))
                 .ignore_error();
-
-            // Try to create input context for the window.
-            if let Some(ime) = event_loop.ime.as_ref() {
-                let result = ime
-                    .borrow_mut()
-                    .create_context(window.xwindow as ffi::Window, false);
-                leap!(result);
-            }
 
             // These properties must be set after mapping
             if window_attrs.maximized {
@@ -1757,28 +1744,6 @@ impl UnownedWindow {
             ExternalError::Os(os_error!(OsError::XError(X11Error::Xlib(err).into())))
         })
     }
-
-    #[inline]
-    pub fn set_ime_cursor_area(&self, spot: Position, _size: Size) {
-        let (x, y) = spot.to_physical::<i32>(self.scale_factor()).into();
-        let _ = self.ime_sender.lock().unwrap().send(ImeRequest::Position(
-            self.xwindow as ffi::Window,
-            x,
-            y,
-        ));
-    }
-
-    #[inline]
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        let _ = self
-            .ime_sender
-            .lock()
-            .unwrap()
-            .send(ImeRequest::Allow(self.xwindow as ffi::Window, allowed));
-    }
-
-    #[inline]
-    pub fn set_ime_purpose(&self, _purpose: ImePurpose) {}
 
     #[inline]
     pub fn focus_window(&self) {

@@ -19,17 +19,12 @@ use crate::platform::x11::XlibErrorHook;
 use crate::{
     dpi::{PhysicalPosition, PhysicalSize, Position, Size},
     error::{EventLoopError, ExternalError, NotSupportedError, OsError as RootOsError},
-    event::KeyEvent,
     event_loop::{
         AsyncRequestSerial, ControlFlow, DeviceEvents, EventLoopClosed,
         EventLoopWindowTarget as RootELW,
     },
     icon::Icon,
-    keyboard::{Key, PhysicalKey},
-    platform::{
-        modifier_supplement::KeyEventExtModifierSupplement, pump_events::PumpStatus,
-        scancode::PhysicalKeyExtScancode,
-    },
+    platform::pump_events::PumpStatus,
     window::{
         ActivationToken, CursorGrabMode, CursorIcon, ImePurpose, ResizeDirection, Theme,
         UserAttentionType, WindowAttributes, WindowButtons, WindowLevel,
@@ -43,7 +38,6 @@ use x11::{util::WindowType as XWindowType, X11Error, XConnection, XError};
 pub(crate) use crate::icon::RgbaIcon as PlatformIcon;
 pub(crate) use crate::platform_impl::Fullscreen;
 
-pub mod common;
 #[cfg(wayland_platform)]
 pub mod wayland;
 #[cfg(x11_platform)]
@@ -420,48 +414,8 @@ impl Window {
     }
 
     #[inline]
-    pub fn set_cursor_icon(&self, cursor: CursorIcon) {
-        x11_or_wayland!(match self; Window(w) => w.set_cursor_icon(cursor))
-    }
-
-    #[inline]
-    pub fn set_cursor_grab(&self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        x11_or_wayland!(match self; Window(window) => window.set_cursor_grab(mode))
-    }
-
-    #[inline]
-    pub fn set_cursor_visible(&self, visible: bool) {
-        x11_or_wayland!(match self; Window(window) => window.set_cursor_visible(visible))
-    }
-
-    #[inline]
-    pub fn drag_window(&self) -> Result<(), ExternalError> {
-        x11_or_wayland!(match self; Window(window) => window.drag_window())
-    }
-
-    #[inline]
-    pub fn drag_resize_window(&self, direction: ResizeDirection) -> Result<(), ExternalError> {
-        x11_or_wayland!(match self; Window(window) => window.drag_resize_window(direction))
-    }
-
-    #[inline]
-    pub fn show_window_menu(&self, position: Position) {
-        x11_or_wayland!(match self; Window(w) => w.show_window_menu(position))
-    }
-
-    #[inline]
-    pub fn set_cursor_hittest(&self, hittest: bool) -> Result<(), ExternalError> {
-        x11_or_wayland!(match self; Window(w) => w.set_cursor_hittest(hittest))
-    }
-
-    #[inline]
     pub fn scale_factor(&self) -> f64 {
         x11_or_wayland!(match self; Window(w) => w.scale_factor())
-    }
-
-    #[inline]
-    pub fn set_cursor_position(&self, position: Position) -> Result<(), ExternalError> {
-        x11_or_wayland!(match self; Window(w) => w.set_cursor_position(position))
     }
 
     #[inline]
@@ -512,26 +466,6 @@ impl Window {
     #[inline]
     pub fn set_window_icon(&self, window_icon: Option<Icon>) {
         x11_or_wayland!(match self; Window(w) => w.set_window_icon(window_icon.map(|icon| icon.inner)))
-    }
-
-    #[inline]
-    pub fn set_ime_cursor_area(&self, position: Position, size: Size) {
-        x11_or_wayland!(match self; Window(w) => w.set_ime_cursor_area(position, size))
-    }
-
-    #[inline]
-    pub fn reset_dead_keys(&self) {
-        common::xkb::reset_dead_keys()
-    }
-
-    #[inline]
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        x11_or_wayland!(match self; Window(w) => w.set_ime_allowed(allowed))
-    }
-
-    #[inline]
-    pub fn set_ime_purpose(&self, purpose: ImePurpose) {
-        x11_or_wayland!(match self; Window(w) => w.set_ime_purpose(purpose))
     }
 
     #[inline]

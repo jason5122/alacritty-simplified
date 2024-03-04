@@ -36,7 +36,6 @@ use crate::{
     event::{Event, StartCause, WindowEvent},
     event_loop::{DeviceEvents, EventLoopClosed, EventLoopWindowTarget as RootELW},
     platform::pump_events::PumpStatus,
-    platform_impl::common::xkb::Context,
     platform_impl::{
         platform::{min_timeout, WindowId},
         PlatformSpecificWindowBuilderAttributes,
@@ -49,7 +48,6 @@ mod atoms;
 mod dnd;
 mod event_processor;
 pub mod ffi;
-mod ime;
 mod monitor;
 pub mod util;
 mod window;
@@ -59,7 +57,6 @@ mod xsettings;
 use atoms::*;
 use dnd::{Dnd, DndState};
 use event_processor::{EventProcessor, MAX_MOD_REPLAY_LEN};
-use ime::{Ime, ImeCreationError, ImeReceiver, ImeRequest, ImeSender};
 pub(crate) use monitor::{MonitorHandle, VideoMode};
 use window::UnownedWindow;
 pub(crate) use xdisplay::XConnection;
@@ -133,11 +130,9 @@ pub struct EventLoopWindowTarget<T> {
     xconn: Arc<XConnection>,
     wm_delete_window: xproto::Atom,
     net_wm_ping: xproto::Atom,
-    ime_sender: ImeSender,
     control_flow: Cell<ControlFlow>,
     exit: Cell<Option<i32>>,
     root: xproto::Window,
-    ime: Option<RefCell<Ime>>,
     windows: RefCell<HashMap<WindowId, Weak<UnownedWindow>>>,
     redraw_sender: WakeSender<WindowId>,
     activation_sender: WakeSender<ActivationToken>,
@@ -189,8 +184,6 @@ impl<T: 'static> EventLoop<T> {
         let dnd = Dnd::new(Arc::clone(&xconn))
             .expect("Failed to call XInternAtoms when initializing drag and drop");
 
-        let (ime_sender, ime_receiver) = mpsc::channel();
-        let (ime_event_sender, ime_event_receiver) = mpsc::channel();
         // Input methods will open successfully without setting the locale, but it won't be
         // possible to actually commit pre-edit sequences.
         unsafe {
@@ -214,15 +207,6 @@ impl<T: 'static> EventLoop<T> {
                 setlocale(LC_CTYPE, default_locale);
             }
         }
-
-        let ime = Ime::new(Arc::clone(&xconn), ime_event_sender);
-        if let Err(ImeCreationError::OpenFailure(state)) = ime.as_ref() {
-            warn!("Failed to open input method: {state:#?}");
-        } else if let Err(err) = ime.as_ref() {
-            warn!("Failed to set input method destruction callback: {err:?}");
-        }
-
-        let ime = ime.ok().map(RefCell::new);
 
         let randr_event_offset = xconn
             .select_xrandr_input(root)
@@ -286,20 +270,15 @@ impl<T: 'static> EventLoop<T> {
         // Create a channel for sending user events.
         let (user_sender, user_channel) = mpsc::channel();
 
-        let xkb_context =
-            Context::from_x11_xkb(xconn.xcb_connection().get_raw_xcb_connection()).unwrap();
-
         let mut xmodmap = util::ModifierKeymap::new();
         xmodmap.reload_from_x_connection(&xconn);
 
         let window_target = EventLoopWindowTarget {
-            ime,
             root,
             control_flow: Cell::new(ControlFlow::default()),
             exit: Cell::new(None),
             windows: Default::default(),
             _marker: ::std::marker::PhantomData,
-            ime_sender,
             xconn,
             wm_delete_window,
             net_wm_ping,
@@ -327,18 +306,9 @@ impl<T: 'static> EventLoop<T> {
             dnd,
             devices: Default::default(),
             randr_event_offset,
-            ime_receiver,
-            ime_event_receiver,
             xi2ext,
-            xfiltered_modifiers: VecDeque::with_capacity(MAX_MOD_REPLAY_LEN),
-            xmodmap,
             xkbext,
-            xkb_context,
-            num_touch: 0,
-            held_key_press: None,
-            first_touch: None,
             active_window: None,
-            modifiers: Default::default(),
             is_composing: false,
         };
 
@@ -964,15 +934,6 @@ impl From<ReplyError> for X11Error {
     }
 }
 
-impl From<ime::ImeContextCreationError> for X11Error {
-    fn from(value: ime::ImeContextCreationError) -> Self {
-        match value {
-            ime::ImeContextCreationError::XError(e) => e.into(),
-            ime::ImeContextCreationError::Null => Self::UnexpectedNull("XOpenIM"),
-        }
-    }
-}
-
 impl From<ReplyOrIdError> for X11Error {
     fn from(value: ReplyOrIdError) -> Self {
         match value {
@@ -1037,9 +998,6 @@ impl<'a> Drop for GenericEventCookie<'a> {
 
 fn mkwid(w: xproto::Window) -> crate::window::WindowId {
     crate::window::WindowId(crate::platform_impl::platform::WindowId(w as _))
-}
-fn mkdid(w: xinput::DeviceId) -> crate::event::DeviceId {
-    crate::event::DeviceId(crate::platform_impl::DeviceId::X(DeviceId(w)))
 }
 
 #[derive(Debug)]

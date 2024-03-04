@@ -2,7 +2,7 @@
 
 use std::vec::Drain;
 
-use crate::event::{DeviceEvent, DeviceId as RootDeviceId, Event, WindowEvent};
+use crate::event::{Event, WindowEvent};
 use crate::platform_impl::platform::DeviceId as PlatformDeviceId;
 use crate::window::WindowId as RootWindowId;
 
@@ -24,15 +24,6 @@ impl EventSink {
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.window_events.is_empty()
-    }
-
-    /// Add new device event to a queue.
-    #[inline]
-    pub fn push_device_event(&mut self, event: DeviceEvent, device_id: DeviceId) {
-        self.window_events.push(Event::DeviceEvent {
-            event,
-            device_id: RootDeviceId(PlatformDeviceId::Wayland(device_id)),
-        });
     }
 
     /// Add new window event to a queue.

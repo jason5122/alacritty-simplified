@@ -24,10 +24,6 @@ use sctk::subcompositor::SubcompositorState;
 
 use crate::platform_impl::wayland::event_loop::sink::EventSink;
 use crate::platform_impl::wayland::output::MonitorHandle;
-use crate::platform_impl::wayland::seat::{
-    PointerConstraintsState, RelativePointerState, TextInputState, WinitPointerData,
-    WinitPointerDataExt, WinitSeatState,
-};
 use crate::platform_impl::wayland::types::kwin_blur::KWinBlurManager;
 use crate::platform_impl::wayland::types::wp_fractional_scaling::FractionalScalingManager;
 use crate::platform_impl::wayland::types::wp_viewporter::ViewporterState;
@@ -50,9 +46,6 @@ pub struct WinitState {
     /// The state of the subcompositor.
     pub subcompositor_state: Option<Arc<SubcompositorState>>,
 
-    /// The seat state responsible for all sorts of input.
-    pub seat_state: SeatState,
-
     /// The shm for software buffers, such as cursors.
     pub shm: Shm,
 
@@ -71,15 +64,6 @@ pub struct WinitState {
     /// The update for the `windows` comming from the compositor.
     pub window_compositor_updates: Vec<WindowCompositorUpdate>,
 
-    /// Currently handled seats.
-    pub seats: AHashMap<ObjectId, WinitSeatState>,
-
-    /// Currently present cursor surfaces.
-    pub pointer_surfaces: AHashMap<ObjectId, Arc<ThemedPointer<WinitPointerData>>>,
-
-    /// The state of the text input on the client.
-    pub text_input_state: Option<TextInputState>,
-
     /// Observed monitors.
     pub monitors: Arc<Mutex<Vec<MonitorHandle>>>,
 
@@ -89,12 +73,6 @@ pub struct WinitState {
 
     /// Xdg activation.
     pub xdg_activation: Option<XdgActivationState>,
-
-    /// Relative pointer.
-    pub relative_pointer: Option<RelativePointerState>,
-
-    /// Pointer constraints to handle pointer locking and confining.
-    pub pointer_constraints: Option<Arc<PointerConstraintsState>>,
 
     /// Viewporter state on the given window.
     pub viewporter_state: Option<ViewporterState>,
@@ -137,13 +115,6 @@ impl WinitState {
         let output_state = OutputState::new(globals, queue_handle);
         let monitors = output_state.outputs().map(MonitorHandle::new).collect();
 
-        let seat_state = SeatState::new(globals, queue_handle);
-
-        let mut seats = AHashMap::default();
-        for seat in seat_state.seats() {
-            seats.insert(seat.id(), WinitSeatState::new());
-        }
-
         let (viewporter_state, fractional_scaling_manager) =
             if let Ok(fsm) = FractionalScalingManager::new(globals, queue_handle) {
                 (ViewporterState::new(globals, queue_handle).ok(), Some(fsm))
@@ -156,7 +127,6 @@ impl WinitState {
             compositor_state: Arc::new(compositor_state),
             subcompositor_state: subcompositor_state.map(Arc::new),
             output_state,
-            seat_state,
             shm: Shm::bind(globals, queue_handle).map_err(WaylandError::Bind)?,
 
             xdg_shell: XdgShell::bind(globals, queue_handle).map_err(WaylandError::Bind)?,
@@ -169,15 +139,6 @@ impl WinitState {
             viewporter_state,
             fractional_scaling_manager,
             kwin_blur_manager: KWinBlurManager::new(globals, queue_handle).ok(),
-
-            seats,
-            text_input_state: TextInputState::new(globals, queue_handle).ok(),
-
-            relative_pointer: RelativePointerState::new(globals, queue_handle).ok(),
-            pointer_constraints: PointerConstraintsState::new(globals, queue_handle)
-                .map(Arc::new)
-                .ok(),
-            pointer_surfaces: Default::default(),
 
             monitors: Arc::new(Mutex::new(monitors)),
             events_sink: EventSink::new(),
@@ -218,16 +179,6 @@ impl WinitState {
             // Update the scale factor right away.
             window.lock().unwrap().set_scale_factor(scale_factor);
             self.window_compositor_updates[pos].scale_changed = true;
-        } else if let Some(pointer) = self.pointer_surfaces.get(&surface.id()) {
-            // Get the window, where the pointer resides right now.
-            let focused_window = match pointer.pointer().winit_data().focused_window() {
-                Some(focused_window) => focused_window,
-                None => return,
-            };
-
-            if let Some(window_state) = self.windows.get_mut().get(&focused_window) {
-                window_state.lock().unwrap().reload_cursor_style()
-            }
         }
     }
 
@@ -384,7 +335,7 @@ impl ProvidesRegistryState for WinitState {
         &mut self.registry_state
     }
 
-    sctk::registry_handlers![OutputState, SeatState];
+    sctk::registry_handlers![OutputState];
 }
 
 // The window update comming from the compositor.

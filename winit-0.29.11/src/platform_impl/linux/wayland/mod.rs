@@ -17,7 +17,6 @@ pub use window::Window;
 
 mod event_loop;
 mod output;
-mod seat;
 mod state;
 mod types;
 mod window;

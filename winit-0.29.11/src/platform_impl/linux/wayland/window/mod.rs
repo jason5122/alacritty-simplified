@@ -16,7 +16,7 @@ use sctk::shell::WaylandSurface;
 
 use crate::dpi::{LogicalSize, PhysicalPosition, PhysicalSize, Position, Size};
 use crate::error::{ExternalError, NotSupportedError, OsError as RootOsError};
-use crate::event::{Ime, WindowEvent};
+use crate::event::WindowEvent;
 use crate::event_loop::AsyncRequestSerial;
 use crate::platform_impl::{
     Fullscreen, MonitorHandle as PlatformMonitorHandle, OsError, PlatformIcon,
@@ -374,21 +374,6 @@ impl Window {
     }
 
     #[inline]
-    pub fn show_window_menu(&self, position: Position) {
-        let scale_factor = self.scale_factor();
-        let position = position.to_logical(scale_factor);
-        self.window_state.lock().unwrap().show_window_menu(position);
-    }
-
-    #[inline]
-    pub fn drag_resize_window(&self, direction: ResizeDirection) -> Result<(), ExternalError> {
-        self.window_state
-            .lock()
-            .unwrap()
-            .drag_resize_window(direction)
-    }
-
-    #[inline]
     pub fn set_resizable(&self, resizable: bool) {
         if self.window_state.lock().unwrap().set_resizable(resizable) {
             // NOTE: Requires commit to be applied.
@@ -507,19 +492,6 @@ impl Window {
         }
     }
 
-    #[inline]
-    pub fn set_cursor_icon(&self, cursor: CursorIcon) {
-        self.window_state.lock().unwrap().set_cursor(cursor);
-    }
-
-    #[inline]
-    pub fn set_cursor_visible(&self, visible: bool) {
-        self.window_state
-            .lock()
-            .unwrap()
-            .set_cursor_visible(visible);
-    }
-
     pub fn request_user_attention(&self, request_type: Option<UserAttentionType>) {
         let xdg_activation = match self.xdg_activation.as_ref() {
             Some(xdg_activation) => xdg_activation,
@@ -560,75 +532,6 @@ impl Window {
         xdg_activation_token.commit();
 
         Ok(serial)
-    }
-
-    #[inline]
-    pub fn set_cursor_grab(&self, mode: CursorGrabMode) -> Result<(), ExternalError> {
-        self.window_state.lock().unwrap().set_cursor_grab(mode)
-    }
-
-    #[inline]
-    pub fn set_cursor_position(&self, position: Position) -> Result<(), ExternalError> {
-        let scale_factor = self.scale_factor();
-        let position = position.to_logical(scale_factor);
-        self.window_state
-            .lock()
-            .unwrap()
-            .set_cursor_position(position)
-            // Request redraw on success, since the state is double buffered.
-            .map(|_| self.request_redraw())
-    }
-
-    #[inline]
-    pub fn drag_window(&self) -> Result<(), ExternalError> {
-        self.window_state.lock().unwrap().drag_window()
-    }
-
-    #[inline]
-    pub fn set_cursor_hittest(&self, hittest: bool) -> Result<(), ExternalError> {
-        let surface = self.window.wl_surface();
-
-        if hittest {
-            surface.set_input_region(None);
-            Ok(())
-        } else {
-            let region = Region::new(&*self.compositor).map_err(|_| {
-                ExternalError::Os(os_error!(OsError::Misc("failed to set input region.")))
-            })?;
-            region.add(0, 0, 0, 0);
-            surface.set_input_region(Some(region.wl_region()));
-            Ok(())
-        }
-    }
-
-    #[inline]
-    pub fn set_ime_cursor_area(&self, position: Position, size: Size) {
-        let window_state = self.window_state.lock().unwrap();
-        if window_state.ime_allowed() {
-            let scale_factor = window_state.scale_factor();
-            let position = position.to_logical(scale_factor);
-            let size = size.to_logical(scale_factor);
-            window_state.set_ime_cursor_area(position, size);
-        }
-    }
-
-    #[inline]
-    pub fn set_ime_allowed(&self, allowed: bool) {
-        let mut window_state = self.window_state.lock().unwrap();
-
-        if window_state.ime_allowed() != allowed && window_state.set_ime_allowed(allowed) {
-            let event = WindowEvent::Ime(if allowed { Ime::Enabled } else { Ime::Disabled });
-            self.window_events_sink
-                .lock()
-                .unwrap()
-                .push_window_event(event, self.window_id);
-            self.event_loop_awakener.ping();
-        }
-    }
-
-    #[inline]
-    pub fn set_ime_purpose(&self, purpose: ImePurpose) {
-        self.window_state.lock().unwrap().set_ime_purpose(purpose);
     }
 
     #[inline]
