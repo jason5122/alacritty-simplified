@@ -133,7 +133,7 @@ impl Window {
             .with_visible(false)
             .with_transparent(true)
             .with_blur(false)
-            .with_maximized(true)
+            .with_maximized(false)
             .with_fullscreen(None)
             .build(event_loop)?;
 
