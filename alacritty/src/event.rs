@@ -95,20 +95,7 @@ impl InputProcessor<ActionContext<'_>> {
                         self.ctx.display.pending_update.set_dimensions(size);
                     },
                     WindowEvent::ScaleFactorChanged { scale_factor: _, .. } => {},
-                    WindowEvent::KeyboardInput { event: _, is_synthetic: false, .. } => (),
-                    WindowEvent::ModifiersChanged(_) => (),
-                    WindowEvent::MouseInput { state: _, button: _, .. } => (),
-                    WindowEvent::CursorMoved { position: _, .. } => (),
-                    WindowEvent::MouseWheel { delta: _, phase: _, .. } => (),
-                    WindowEvent::KeyboardInput { is_synthetic: true, .. }
-                    | WindowEvent::ActivationTokenDone { .. }
-                    | WindowEvent::TouchpadPressure { .. }
-                    | WindowEvent::CursorLeft { .. }
-                    | WindowEvent::TouchpadMagnify { .. }
-                    | WindowEvent::TouchpadRotate { .. }
-                    | WindowEvent::SmartMagnify { .. }
-                    | WindowEvent::CursorEntered { .. }
-                    | WindowEvent::AxisMotion { .. }
+                    WindowEvent::ActivationTokenDone { .. }
                     | WindowEvent::HoveredFileCancelled
                     | WindowEvent::Destroyed
                     | WindowEvent::ThemeChanged(_)
@@ -116,16 +103,13 @@ impl InputProcessor<ActionContext<'_>> {
                     | WindowEvent::RedrawRequested
                     | WindowEvent::CloseRequested
                     | WindowEvent::Moved(_)
-                    | WindowEvent::Touch(_)
                     | WindowEvent::Focused(_)
                     | WindowEvent::Occluded(_)
-                    | WindowEvent::DroppedFile(_)
-                    | WindowEvent::Ime(_) => (),
+                    | WindowEvent::DroppedFile(_) => (),
                 }
             },
             WinitEvent::Suspended { .. }
             | WinitEvent::NewEvents { .. }
-            | WinitEvent::DeviceEvent { .. }
             | WinitEvent::LoopExiting
             | WinitEvent::Resumed
             | WinitEvent::MemoryWarning
@@ -275,11 +259,7 @@ impl Processor {
             WinitEvent::NewEvents(StartCause::Init) => false,
             WinitEvent::WindowEvent { event, .. } => matches!(
                 event,
-                WindowEvent::KeyboardInput { is_synthetic: true, .. }
-                    | WindowEvent::TouchpadPressure { .. }
-                    | WindowEvent::CursorEntered { .. }
-                    | WindowEvent::AxisMotion { .. }
-                    | WindowEvent::HoveredFileCancelled
+                WindowEvent::HoveredFileCancelled
                     | WindowEvent::Destroyed
                     | WindowEvent::HoveredFile(_)
                     | WindowEvent::Moved(_)

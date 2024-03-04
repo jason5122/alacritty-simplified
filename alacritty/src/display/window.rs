@@ -137,10 +137,6 @@ impl Window {
             .with_fullscreen(None)
             .build(event_loop)?;
 
-        // Text cursor.
-        let current_mouse_cursor = CursorIcon::Text;
-        window.set_cursor_icon(current_mouse_cursor);
-
         #[cfg(target_os = "macos")]
         use_srgb_color_space(&window);
 
